@@ -1,0 +1,28 @@
+<?php
+//error log configuration
+$errHandle = array();
+$errHandle['logErrors']=true;
+$errHandle['logFile']='errors/dbase_errors.log';      //absolute path
+$errHandle['logFileSize']='10';  //error log file in MB
+
+//connection configuration
+$config = array();
+$config["user"] = 'root';   //database username
+$config["pass"] = 'admin'; //database password
+$config["dbase"] = 'azizi'; //database name
+$config["temp_dbase"] = 'temp_data'; //database name
+$config["dbloc"] = 'localhost'; //database location
+
+//contact string should something go haywire
+$contact=" Please contact the system administrator.";
+
+//tables being used. Catering for change of tables during testing
+$tables= array();
+$tables['samples']='samples';
+$tables['sampleTypesDef']='sample_types_def';
+
+//uploaded file configuration
+$uploadedFiles=array();
+$uploadedFiles['location'] = 'uploadedFiles/';
+$uploadedFiles['max_size'] = 104800;
+?>

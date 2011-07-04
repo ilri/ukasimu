@@ -1,0 +1,327 @@
+﻿root {
+    display: block;
+}
+
+html{
+	overflow:  auto;
+}
+
+body {
+    font-family:Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 0;
+    font-size: 76%;
+    color: #000000;
+    background-color:#f1f1f1;
+}
+
+-moz-any-link:focus {
+  border: none;
+}
+
+#header{
+	height: 155px;
+	margin:0;
+	padding:0px;
+   width: 100%;
+	text-align: center;
+	vertical-align: middle;
+	border-bottom:1px gray solid;
+}
+
+#header img{
+   text-align: center;
+}
+
+#contents{
+   width: 870px;
+   max-height: 580px;
+}
+
+#footer{
+   height: auto;
+	margin: 4px;
+	padding: 4px;
+   border: 1px solid gray;
+   width: auto;
+   font-size:.8em;
+   font-weight: bold;
+   text-align: right;
+   vertical-align:middle;
+   background-color: #9DBED2;
+}
+
+#search_form{
+   text-align: center;
+   padding: 5px;
+   margin: 5px;
+}
+
+#search_form #search_mssg{
+   padding-bottom: 5px;
+}
+
+#search_results{
+   text-align: center;
+}
+
+#search_results div, #search_sort_results div{
+   margin: 4px 1%;
+   width: 98%;
+}
+
+#samples{
+   border: none;
+}
+
+#search_results, #search_results div, #search_sort_results{
+   border: 1px dotted black;
+}
+
+#samples table td, #animal_data table td, #search_sort_results table td{
+   border: 1px dotted black;
+   vertical-align: top;
+}
+
+#samples ul{
+   margin: 3px 0px;
+}
+
+#samples li{
+   font-size:11px;
+   margin: 2px 0px;
+}
+
+#animal_data{
+   border: none;
+}
+
+#aliquot_settings table{
+   width: auto;
+   margin: 5px auto;
+}
+
+#aliquot_settings #aliquotNos table{
+   width: 70%;
+   margin: 5px 14%;
+}
+
+#aliquot_settings #aliquotNos table th{
+   text-align: center;
+}
+
+#aliquots, #animal_data{
+   text-align: center;
+}
+
+#aliquots table, #animal_data table{
+   width: 100%;
+}
+
+#aliquots table .icipe_aliquots{
+   background-color:green;
+}
+
+#aliquots table .ilri_aliquots{
+   background-color:purple;
+}
+
+#aliquots table .kari_aliquots{
+   background-color:maroon;
+}
+
+#aliquots table .kemri_aliquots{
+   background-color:red;
+}
+
+#aliquots table, #aliquots table td{
+   border: 1px solid black;
+   border-bottom: none;
+}
+
+#aliquots table td{
+   border-bottom: none;
+   border-right: none;
+   padding: 3px;
+}
+
+#aliquots table th{
+   text-align: center;
+}
+
+#aliquots table .left{
+   border-left: none;
+}
+
+#aliquots table .bottom{
+   border-bottom: 1px solid black;
+}
+
+#footer_links{
+   text-align:center;
+   margin: 10px 0px;
+}
+
+#maintable{
+   margin: 0px auto;
+   border: 1px solid gray;
+}
+
+#maintable a, #maintable a:hover{
+   font-weight: bold;
+   padding: 2px;
+   font-size: 0.8em;
+   text-decoration: none;
+}
+
+#maintable tbody{
+    background-color: #ffffff;
+}
+
+#unass_boxes table{
+   border: none;
+   width: 60%;
+   margin-left:20%;
+}
+
+#unass_boxes table tr th{
+   text-align: left;
+}
+
+#contents #uploads{
+   width: 65%;
+   margin-right: 20%;
+   text-align: right;
+}
+
+#uploads input{
+   margin: 2px;
+   border: 1px solid gray;
+}
+
+#links{
+   width: 90%;
+   text-align:center;
+}
+
+#links input[type=submit], #links input[type=reset]{
+   background-color:#FFEBCD;
+   border: 1px solid black;
+   margin: 2px 3px;
+}
+
+#page_header{
+   width: 100%;
+   text-align: center;
+   font-size:2em;
+   color:orange;
+   font-weight: bold;
+}
+
+#addinfo{
+   text-align: center;
+}
+
+#assigning{
+   width: 99%;
+   margin: 5px 0px;
+   border-bottom: 1px solid gray;
+}
+
+#assigned{
+   width: 39%;
+   float: left;
+   max-height:580px;
+   height:580px;
+}
+
+#assigning div{
+   overflow-x: auto;
+   text-align: center;
+   max-height: 500px;
+   height: 500px;
+}
+
+#to_assign, #in_assigned{
+   width: 98%;
+   border-left: 1px solid gray;
+   padding-left: 5px;
+   border-top: 1px solid black;
+   border-bottom: 1px solid black;
+}
+
+#assigned{
+   width: 43%;
+   float: left;
+}
+
+#in_assigned{
+   max-height:530px;
+   height:530px;
+   overflow-x: auto;
+   width: 98%;
+   margin-top: 35px;
+}
+
+#to_assign table, #assigned table{
+   width: 98%;
+   margin: 3px;
+   font-size:smaller;
+}
+
+#assignCombo{
+   padding: 3px;
+   text-align: center;
+   height: auto;
+   margin:3px;
+}
+
+#sublinks{
+   height: auto;
+   margin: 2px;
+}
+
+#assigned_trays, #unassigned_trays{
+   max-height:530px;
+   height:530px;
+   overflow-x: auto;
+   width: 47%;
+   margin: 5px;
+   border: 1px dotted black;
+   padding: 5px;
+}
+
+#assigned_trays table, #unassigned_trays table{
+   width: 97%;
+   margin: 0px 5px;
+}
+
+#unassigned_trays{
+   float: left;
+}
+
+#assigningTrays div table{
+   font-size: 9pt;
+}
+
+.dark_brown{
+   background-color: #CBC19E;
+}
+
+.light_brown{
+   background-color: #EFE5C2;
+}
+
+#main_div ol{
+	margin-left: 30px;
+	padding-left: 5px;
+}
+
+.error{
+   background-color: red;
+   padding: 3px;
+}
+
+.no_error{
+   background-color: green;
+}
