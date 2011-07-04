@@ -10,7 +10,7 @@ $config = array();
 $config["user"] = 'root';   //database username
 $config["pass"] = 'admin'; //database password
 $config["dbase"] = 'azizi'; //database name
-$config["temp_dbase"] = 'temp_data'; //database name
+$config["temp_dbase"] = 'samples'; //database name
 $config["dbloc"] = 'localhost'; //database location
 
 //contact string should something go haywire

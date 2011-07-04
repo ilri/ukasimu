@@ -325,3 +325,7 @@ body {
 .no_error{
    background-color: green;
 }
+
+.ol_li{
+   margin: 5px;
+}

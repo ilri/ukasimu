@@ -432,11 +432,10 @@ function Home($addinfo='') {
    $content=<<<CONTENT
 <div>
    <div id='addinfo'>$addinfo</div>
-   <ol>
-      <li><a href="$pageref?page=search">Search</a></li>
-      <li><a href="$pageref?page=search_sort">Search and Sort</a></li>
-      <li><a href="$pageref?page=upload">Upload Samples File</a></li>
+   <ol class='ol_li'>
       <li><a href="$pageref?page=sort_aliquots">Sort Aliquots</a></li>
+      <li><a href="$pageref?page=merge">Merge different collections</a></li>
+      <li><a href="$pageref?page=backup">Backup</a></li>
    </ol>
 </div>
 CONTENT;
@@ -712,7 +711,7 @@ global $config, $uploadedFiles, $contact, $query;
          elseif(preg_match('/^<\/AnimalData>/i', $text, $res)){   //try and save the animal details to the database
             //print_r($curAnimal); echo '<br />';
             //check if the animal is already saved before
-            $animalId=GetSingleRowValue("{$config['temp_dbase']}.animals", 'id', 'animal_id', strtoupper($curAnimal['id']));
+            $animalId=GetSingleRowValue("{$config['temp_dbase']}.export_animals", 'id', 'animal_id', strtoupper($curAnimal['id']));
             if(is_numeric($animalId)){/*The animal has already been saved. no need to further save it.*/}
             elseif(is_string($animalId)) {
                RollBackTrans(); return 'There was an error while fetching data from the database.'.$animalId;
@@ -721,7 +720,7 @@ global $config, $uploadedFiles, $contact, $query;
                $cols=array('animal_id', 'location');
                $colvals=array(strtoupper($curAnimal['id']), $curLocation);
 //               LogError(print_r($curAnimal, true));
-               $results=InsertValues("{$config['temp_dbase']}.animals", $cols, $colvals);
+               $results=InsertValues("{$config['temp_dbase']}.export_animals", $cols, $colvals);
                //LogError();
                if(is_string($results)) {
                   RollBackTrans(); return 'There was an error while adding data to the database';
@@ -734,20 +733,20 @@ global $config, $uploadedFiles, $contact, $query;
                $colvals=array(strtoupper($s['label']), $animalId, $s['longitude'], $s['lat'], $s['date'], $curAnimal['collector'],
                    mysql_real_escape_string($curAnimal['comments']), $curAnimal['clinical'], $curAnimal['date']);
                //check if the sample is saved, if it is, try and update the data
-               $sampleId=GetSingleRowValue("{$config['temp_dbase']}.samples", 'id', 'label', $s['label']);
+               $sampleId=GetSingleRowValue("{$config['temp_dbase']}.export_samples", 'id', 'label', $s['label']);
 //               echo "$query<br />";
                if($sampleId==-2){
                   RollBackTrans(); return "There was an error while fetching data from the database.$contact";
                }
                elseif(is_null($sampleId)) {
                   var_dump($sampleId);
-                  $results=InsertValues("{$config['temp_dbase']}.samples", $cols, $colvals);
+                  $results=InsertValues("{$config['temp_dbase']}.export_samples", $cols, $colvals);
                   if(is_string($results)) {
                      RollBackTrans(); return 'There was an error while adding data to the database';
                   }
                }
                elseif(is_numeric($sampleId)) {
-                  $results=UpdateTable("{$config['temp_dbase']}.samples", $cols, $colvals, 'id', $sampleId);
+                  $results=UpdateTable("{$config['temp_dbase']}.export_samples", $cols, $colvals, 'id', $sampleId);
                   if(is_string($results)) {
                      RollBackTrans(); return 'There was an error while adding data to the database';
                   }
@@ -779,7 +778,7 @@ global $config, $uploadedFiles, $contact, $query;
       }
    }
    CommitTrans();
-   //echo GetSingleRowValue('{$config['temp_dbase']}.samples', 'count(id)', 'id', 'is not null');
+   //echo GetSingleRowValue('{$config['temp_dbase']}.export_samples', 'count(id)', 'id', 'is not null');
    //RollBackTrans();
    return 'The uploaded file has been successfully processed.';
 }
@@ -829,7 +828,7 @@ global $query, $config, $contact, $nextBox, $nextPosition, $aliquot_settings;
 //      echo "{$aliquot_settings['trays_format2use'][$aliquot_number-1]} -- $save_tray<br />";
       if(preg_match('/^'.$aliquot_settings['trays_format2use'][$aliquot_number-1].'$/i', $save_tray, $res) &&
          ($save_position>0 && $save_position <= $aliquot_settings['trays'][$aliquot_number-1]['size']) ) {
-            $parentSampleId=GetSingleRowValue("{$config['temp_dbase']}.samples", 'id', array('label'), array($parent_sample));
+            $parentSampleId=GetSingleRowValue("{$config['temp_dbase']}.export_samples", 'id', array('label'), array($parent_sample));
             if($parentSampleId==-2) {
                $addinfo="There was an error while fetching data from the database.$contact";
             }
@@ -850,9 +849,12 @@ global $query, $config, $contact, $nextBox, $nextPosition, $aliquot_settings;
    elseif(isset($searchItem) && $searchItem!='' && $searchItem!='undefined') {
       //we have a sample, check if it is an aliquot or a real sample
       if(preg_match("/^".$aliquot_settings['aliquot_format2use']."$/i", $searchItem)) {
-         //check if this aliquot has been saved before
-         $query="select a.parent_sample, b.label, c.animal_id from {$config['temp_dbase']}.aliquots as a inner join {$config['temp_dbase']}.samples as b on a.parent_sample=b.id "
-         ."inner join {$config['temp_dbase']}.animals as c on b.animal_id=c.id where a.label='$searchItem'";
+         //check if this aliquot has been saved before         
+//         $query="select a.parent_sample, b.label, c.animal_id from {$config['temp_dbase']}.aliquots as a inner join {$config['temp_dbase']}.export_samples as b on a.parent_sample=b.id "
+//         ."inner join {$config['temp_dbase']}.export_animals as c on b.animal_id=c.id where a.label='$searchItem'";
+
+         $query="select a.parent_sample, b.label, c.animal_id from {$config['temp_dbase']}.aliquots as a inner join {$config['temp_dbase']}.export_samples as b on a.parent_sample=b.id "
+         ."inner join {$config['temp_dbase']}.export_animals as c on b.animal_id=c.id where a.label='$searchItem'";
          $results=GetQueryValues($query, MYSQL_ASSOC);
          if(count($results)>0) {
             $query="select * from {$config['temp_dbase']}.aliquots where parent_sample=".$results[0]['parent_sample']." order by aliquot_number";
@@ -869,7 +871,7 @@ global $query, $config, $contact, $nextBox, $nextPosition, $aliquot_settings;
          elseif(isset($parent_sample) && $parent_sample!='undefined') {
             if($addinfo=='') { //we dont have an error
                //get the metadata for this sample, ie from which animal its coming from and the animal metadata
-               $query="select a.id, a.label, b.animal_id, b.location from {$config['temp_dbase']}.samples as a inner join {$config['temp_dbase']}.animals as b on a.animal_id=b.id "
+               $query="select a.id, a.label, b.animal_id, b.location from {$config['temp_dbase']}.export_samples as a inner join {$config['temp_dbase']}.export_animals as b on a.animal_id=b.id "
                   ."where lower(a.label) like lower('$parent_sample')";
                $results=GetQueryValues($query, MYSQL_ASSOC);
                if(is_string($results)){   //there is an error while fetching data from the dbase
@@ -929,7 +931,7 @@ global $query, $config, $contact, $nextBox, $nextPosition, $aliquot_settings;
          if(is_string($res)) {
             $addinfo="There was an error while connecting to the database.$contact";
          }
-         $query="select a.id, a.label, b.animal_id, b.location, a.comments, b.organism from {$config['temp_dbase']}.samples as a inner join {$config['temp_dbase']}.animals as b on a.animal_id=b.id "
+         $query="select a.id, a.label, b.animal_id, b.location, a.comments, b.organism from {$config['temp_dbase']}.export_samples as a inner join {$config['temp_dbase']}.export_animals as b on a.animal_id=b.id "
             ."where lower(a.label) = lower('$searchItem')";
          $results=GetQueryValues($query, MYSQL_ASSOC);
          //LogError();
@@ -1057,7 +1059,7 @@ function NewNextSlot($searchId, $aliquot_number){
 global $config, $query, $contact, $tables, $nextBox, $nextPosition, $aliquot_settings;
    $trayType = strtolower($aliquot_settings['trays_format2use'][$aliquot_number-1]);  //type must be from 1-4
    $pat = "and lower(b.label) rlike '^".strtolower($aliquot_settings['parent_format2use'])."$'";
-   $query = "select a.tray, a.position from {$config['temp_dbase']}.aliquots as a inner join {$config['temp_dbase']}.samples as b on a.parent_sample=b.id "
+   $query = "select a.tray, a.position from {$config['temp_dbase']}.aliquots as a inner join {$config['temp_dbase']}.export_samples as b on a.parent_sample=b.id "
    ."where a.tray is not null and a.position is not null and lower(a.tray) rlike '^$trayType$' $pat order by a.tray desc, a.position desc limit 0,1";
    $results = GetQueryValues($query, MYSQL_ASSOC);
    //LogError();
