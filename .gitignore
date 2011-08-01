@@ -3,3 +3,4 @@ errors/
 uploadedFiles/
 *.sql
 *.svn
+main_old.php
