@@ -80,7 +80,11 @@ body {
 
 #samples table td, #animal_data table td, #search_sort_results table td{
    border: 1px dotted black;
-   vertical-align: top;
+   border-bottom: none;
+}
+
+#samples table td .last_row, #animal_data table td .last_row, #search_sort_results table td .last_row{
+   border-bottom: 1px dotted black;
 }
 
 #samples ul{

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
   <head>
-    <title>AVID - Field Samples Search</title>
+    <title>Field Samples Sorting</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <link rel='stylesheet' type='text/css' href='css/basic.css'>
     <link rel='stylesheet' type='text/css' href='../common/common.css'>
@@ -14,10 +14,10 @@
   </head>
   <body>
      <table id='maintable'><tr><td width="auto">
-      <div id="header"><img src="images/header.jpg" alt="Avid Sample Searching and Sorting"/></div>
+      <div id="header"><img src="images/header.jpg" alt="Sample Searching and Sorting"/></div>
       <div id="main_div"><?php require_once 'modules/mod_startup.php'; ?></div>
       <div id='footer_links'><?php echo $Aliquots->footerLinks; ?></div>
-      <div id='footer'>AVID - Field Samples Search</div>
+      <div id='footer'>Field Samples Sorting</div>
       </td></tr></table>
   </body>
 </html>

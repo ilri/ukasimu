@@ -39,78 +39,77 @@ var Samples = {
          Main.ajaxParams.successMssg='Successfully updated.';
          notificationMessage({create:true, hide:false, updatetext:false, text:'Searching...'});
          params=$('#searchFormId').formSerialize();
-         settings={type:"POST", url:'seamless.php?page=sort_aliquots', data:params, dataType:'text', success:Samples.updateInterface};
-         $.ajax(settings);
+         $.ajax({type:"POST", url:'mod_ajax_calls.php?page=sort_aliquots', data:params, dataType:'text', success:Samples.updateInterface});
          $('#searchItemId').focus();
    },
 
    updateInterface: function(data){
-   var message, err=true;
-   var resp=data.split('$$');
-   if(Main.ajaxParams.successMssg!=undefined) message=Main.ajaxParams.successMssg;
-   else message='The changes have been successfully saved.';
-   if(resp[0]=='error') message=resp[1];
-   else if(resp[0]=='no_error'){
-      if(Main.ajaxParams.div2Update) getObject(Main.ajaxParams.div2Update).innerHTML=resp[1];
-      if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
-      err=false;
-   }
-   else if(resp[0].substr(0,2)=='-1') message=resp[0].substring(2,resp[0].length);
-   else if(resp[0]=='new'){    //we have no error
-      if(Main.ajaxParams.div2Update!=undefined) getObject(Main.ajaxParams.div2UpdateNew).innerHTML=resp[1];
-      if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
-      err=false;
-   }
-   else{    //we have no error
-      if(Main.ajaxParams.div2Update!=undefined) getObject(Main.ajaxParams.div2Update).innerHTML=resp[0];
-      if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
-      err=false;
-   }
-   if($('#notification_box')!=undefined){
-      notificationMessage({create:false, hide:true, updateText:true, text:message, error:err});
-   }
-   $('#searchItemId').focus();
+      var message, err=true;
+      var resp=data.split('$$');
+      if(Main.ajaxParams.successMssg!=undefined) message=Main.ajaxParams.successMssg;
+      else message='The changes have been successfully saved.';
+      if(resp[0]=='error') message=resp[1];
+      else if(resp[0]=='no_error'){
+         if(Main.ajaxParams.div2Update) getObject(Main.ajaxParams.div2Update).innerHTML=resp[1];
+         if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
+         err=false;
+      }
+      else if(resp[0].substr(0,2)=='-1') message=resp[0].substring(2,resp[0].length);
+      else if(resp[0]=='new'){    //we have no error
+         if(Main.ajaxParams.div2Update!=undefined) getObject(Main.ajaxParams.div2UpdateNew).innerHTML=resp[1];
+         if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
+         err=false;
+      }
+      else{    //we have no error
+         if(Main.ajaxParams.div2Update!=undefined) getObject(Main.ajaxParams.div2Update).innerHTML=resp[0];
+         if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
+         err=false;
+      }
+      if($('#notification_box')!=undefined){
+         notificationMessage({create:false, hide:true, updateText:true, text:message, error:err});
+      }
+      $('#searchItemId').focus();
 },
 
    /**
     * Generates placeholder for defining the kind of trays that we are using
     */
    generateAliquots: function(){
-   var count=$('#aliquot_number_id').val(), content='', reg;
-   var parent_format = $('#parent_format').val().trim().toUpperCase(), aliquot_format = $('#aliquot_format').val().trim().toUpperCase();
-   if(count==='undefined' || isNaN(count) || count===''){
-      alert("Please enter a valid number of aliquots");
-      $('#aliquot_number_id').focus();
-      return;
-   }
-   else if('//'){
+      var count=$('#aliquot_number_id').val(), content='', reg;
+      var parent_format = $('#parent_format').val().trim().toUpperCase(), aliquot_format = $('#aliquot_format').val().trim().toUpperCase();
+      if(count==='undefined' || isNaN(count) || count===''){
+         alert("Please enter a valid number of aliquots");
+         $('#aliquot_number_id').focus();
+         return;
+      }
+      else if('//'){
 
-   }
-   //check that the user has entered the correct aliquot and parent format
-   reg = /^[A-Z0-9]{3,4}\s[0-9]$/i
-   if(parent_format=='undefined' || parent_format=='' ||  !reg.test(parent_format)){
-      alert("Please enter the parent format that we are expecting!\nThe format should be something like 'BSR 6' meaning that a parent has the prefix BSR and 6 digits.");
-      $('#parent_format').focus();
-      return;
-   }
-   if(aliquot_format=='undefined' || aliquot_format=='' || !reg.test(aliquot_format)){
-      alert("Please enter the aliquot formt to expect.\nThe format should be something like 'AVAQ 5' meaning that each aliquot will have the prefix AVAQ and 5 digits.");
-      $('#aliquot_format').focus();
-      return;
-   }
-   //create the tray's info placeholders
-   count=parseInt(count);
-   content='<td colspan=6><table><tr><th>Tray label</th><th>Tray Description</th><th>Tray Size</th></tr>';
-   for(var i=0; i<count; i++){
-      content+="<tr><td>Tray "+(i+1)+":&nbsp;&nbsp;<input type='text' name='aliquot_settings[trays]["+i+"][name]' size='15' value='"+Samples.defaultTrayData[i].tray+"' class='tray_name' /></td>"
-         +"<td><input type='text' name='aliquot_settings[trays]["+i+"][descr]' size='20' value='"+Samples.defaultTrayData[i].description+"' /></td>"
-         +"<td><input type='text' name='aliquot_settings[trays]["+i+"][size]' size='5' value='"+Samples.defaultTrayData[i].size+"' /></td></tr>";
-   }
-   content+='</table></td>';
-   $('#aliquotNos').html(content);
-   $('.tray_name')[0].focus();
-   $('[name=find]').bind('click', Samples.search);
-},
+      }
+      //check that the user has entered the correct aliquot and parent format
+      reg = /^[A-Z0-9]{3,4}\s[0-9]$/i
+      if(parent_format=='undefined' || parent_format=='' ||  !reg.test(parent_format)){
+         alert("Please enter the parent format that we are expecting!\nThe format should be something like 'BSR 6' meaning that a parent has the prefix BSR and 6 digits.");
+         $('#parent_format').focus();
+         return;
+      }
+      if(aliquot_format=='undefined' || aliquot_format=='' || !reg.test(aliquot_format)){
+         alert("Please enter the aliquot formt to expect.\nThe format should be something like 'AVAQ 5' meaning that each aliquot will have the prefix AVAQ and 5 digits.");
+         $('#aliquot_format').focus();
+         return;
+      }
+      //create the tray's info placeholders
+      count=parseInt(count);
+      content='<td colspan=6><table><tr><th>Tray label</th><th>Tray Description</th><th>Tray Size</th></tr>';
+      for(var i=0; i<count; i++){
+         content+="<tr><td>Tray "+(i+1)+":&nbsp;&nbsp;<input type='text' name='aliquot_settings[trays]["+i+"][name]' size='15' value='"+Samples.defaultTrayData[i].tray+"' class='tray_name' /></td>"
+            +"<td><input type='text' name='aliquot_settings[trays]["+i+"][descr]' size='20' value='"+Samples.defaultTrayData[i].description+"' /></td>"
+            +"<td><input type='text' name='aliquot_settings[trays]["+i+"][size]' size='5' value='"+Samples.defaultTrayData[i].size+"' /></td></tr>";
+      }
+      content+='</table></td>';
+      $('#aliquotNos').html(content);
+      $('.tray_name')[0].focus();
+      $('[name=find]').bind('click', Samples.search);
+   },
 
    /**
     * When we receive a key 13, call the search function
