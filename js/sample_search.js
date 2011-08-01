@@ -2,7 +2,12 @@ var Main={
 
 };
 
-var Samples={
+var Samples = {
+   defaultTrayData: new Array(
+      {tray: 'TAVQC 5', description: 'ICIPE', size: 81},
+      {tray: 'TAVQA 5', description: 'DVS', size: 81},
+      {tray: 'TAVQL 5', description: 'ILRI', size: 100}
+   ),
    /**
     * Submits the parameters as defined by the user for processing
     */
@@ -34,9 +39,9 @@ var Samples={
          Main.ajaxParams.successMssg='Successfully updated.';
          notificationMessage({create:true, hide:false, updatetext:false, text:'Searching...'});
          params=$('#searchFormId').formSerialize();
-         settings={type:"POST", url:'main.php?page=sort_aliquots', data:params, dataType:'text', success:Samples.updateInterface};
+         settings={type:"POST", url:'seamless.php?page=sort_aliquots', data:params, dataType:'text', success:Samples.updateInterface};
          $.ajax(settings);
-         getObject('searchItemId').focus();
+         $('#searchItemId').focus();
    },
 
    updateInterface: function(data){
@@ -61,7 +66,7 @@ var Samples={
       if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
       err=false;
    }
-   if(getObject('notification_box')!=undefined){
+   if($('#notification_box')!=undefined){
       notificationMessage({create:false, hide:true, updateText:true, text:message, error:err});
    }
    $('#searchItemId').focus();
@@ -97,13 +102,14 @@ var Samples={
    count=parseInt(count);
    content='<td colspan=6><table><tr><th>Tray label</th><th>Tray Description</th><th>Tray Size</th></tr>';
    for(var i=0; i<count; i++){
-      content+="<tr><td>Tray "+(i+1)+":&nbsp;&nbsp;<input type='text' name='aliquot_settings[trays]["+i+"][name]' class='tray_name' size='20' /></td>"
-         +"<td><input type='text' name='aliquot_settings[trays]["+i+"][descr]' size='20' /></td>"
-         +"<td><input type='text' name='aliquot_settings[trays]["+i+"][size]' size='5' /></td></tr>";
+      content+="<tr><td>Tray "+(i+1)+":&nbsp;&nbsp;<input type='text' name='aliquot_settings[trays]["+i+"][name]' size='15' value='"+Samples.defaultTrayData[i].tray+"' class='tray_name' /></td>"
+         +"<td><input type='text' name='aliquot_settings[trays]["+i+"][descr]' size='20' value='"+Samples.defaultTrayData[i].description+"' /></td>"
+         +"<td><input type='text' name='aliquot_settings[trays]["+i+"][size]' size='5' value='"+Samples.defaultTrayData[i].size+"' /></td></tr>";
    }
    content+='</table></td>';
-   $('#aliquotNos').attr({innerHTML: content});
+   $('#aliquotNos').html(content);
    $('.tray_name')[0].focus();
+   $('[name=find]').bind('click', Samples.search);
 },
 
    /**
@@ -158,5 +164,19 @@ var Samples={
       $('#searchFormId')[0].action = form_action.replace(/\?page=.+/, '?page=update_positions');
       $('[name=searchItem]').val($('[name=parent]').val());
       document.forms["searchFormId"].submit();
+   },
+   
+   displayExtraInfo: function(timestamp, lat, longitude, collector, comments, clinical, animal){
+      $('#timestamp').innerHTML="<b>"+timestamp+"</b>";
+      $('#animal').innerHTML="<b>"+animal+"</b>";
+      $('#lat').innerHTML="<b>"+lat+"</b>";
+      $('#long').innerHTML="<b>"+longitude+"</b>";
+      $('#clinical').innerHTML="<b>"+clinical+"</b>";
+      $('#collector').innerHTML="<b>"+collector+"</b>";
+      $('#comments').innerHTML="<b>"+comments+"</b>";
    }
 };
+
+if($('#searchItemId').length != 0){
+   $('#searchItemId').focus();
+}

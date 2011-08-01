@@ -102,8 +102,8 @@ body {
 }
 
 #aliquot_settings #aliquotNos table{
-   width: 70%;
-   margin: 5px 14%;
+   width: auto;
+   margin: 5px auto;
 }
 
 #aliquot_settings #aliquotNos table th{
@@ -200,7 +200,7 @@ body {
 }
 
 #links{
-   width: 90%;
+   width: auto;
    text-align:center;
 }
 
