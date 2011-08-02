@@ -1,4 +1,24 @@
 <?php
+
+/**
+ * This is the main class that will do all the hard work of aliquoting. It keeps track of the current settings, determines automagically where
+ * each aliquot will be saved based on previous aliquots.
+ * 
+ * Version 1.0
+ *
+ * ------------------------------------------------------------------------------------------------------------
+ * 
+ * This is a major overhaul of the aliquoting system
+ * <b>Changes to this version</b><br />
+ * Method of coding changed from procedural to OO
+ * Added default settings when defining the aliquot settings
+ *
+ * 
+ * @category   Aliquoting
+ * @package    Aliquots
+ * @author     Kihara Absolomon <a.kihara@cgiar.org>
+ * @since      v1.0
+ */
 class Aliquots extends DBase{
 
    /**
@@ -11,14 +31,52 @@ class Aliquots extends DBase{
     */
    public $footerLinks;
 
-   public $addinfo;
-
-   public $links;
-   
-   private $nextBox;
-   
-   private $nextPosition;
-   
+   /**
+    * @var  array    An array that will hold all the settings as set by the user and as determined by the system
+    * 
+    * At the height of program execution, this array may look like:
+    * 
+    * <code>
+    * Array
+	 *	(
+	 *	    [parent_format] => BDT 6
+	 *	    [aliquot_format] => AVAQ 5
+	 *	    [noOfAliquots] => 3
+	 *	    [trays] => Array
+	 *	        (
+	 *	            [0] => Array
+	 *	                (
+	 *	                    [name] => TAVQC 5
+	 *	                    [descr] => ICIPE
+	 *	                    [size] => 81
+	 *	                )
+	 *	
+	 *	            [1] => Array
+	 *	                (
+	 *	                    [name] => TAVQA 5
+	 *	                    [descr] => DVS
+	 *	                    [size] => 81
+	 *	                )
+	 *	
+	 *	            [2] => Array
+	 *	                (
+	 *	                    [name] => TAVQL 5
+	 *	                    [descr] => ILRI
+	 *	                    [size] => 100
+	 *	                )
+	 *	
+	 *	        )
+	 *	
+	 *	    [searchItem] => AVAQ09091
+	 *	    [parent_sample] => BDT068460
+	 *	    [animal] => SON, SON00104, S008
+	 *	    [save_tray] => TAVQA00001
+	 *	    [save_position] => 1
+	 *	    [prev_sample] => AVAQ07476
+	 *	    [aliquotIndex] => 1
+	 *	)
+    * </code>
+    */
    private $settings;
    
    public function  __construct() {
@@ -33,15 +91,21 @@ class Aliquots extends DBase{
       }
    }
    
+   /**
+    * Controls the program execution
+    */
    public function TrafficController(){
       if(OPTIONS_REQUESTED_MODULE == '') $this->HomePage();
-      elseif(OPTIONS_REQUESTED_MODULE == 'sort_aliquots') $this->SampleProcessing();
+      elseif(OPTIONS_REQUESTED_MODULE == 'sort_aliquots'){
+         $this->SampleProcessing();
+         $this->footerLinks .= " | <a href=''>Sort Home</a>";
+      }
    }
    
    /**
     * Creates the home page for the system.
     * 
-    * @param   string   $addinfo    Any additional information that needs to be displayed on the home page
+    * @param   string   $addinfo    (Optional) Any additional information that needs to be displayed on the home page
     */
    private function HomePage($addinfo = ''){
 ?>
@@ -57,16 +121,11 @@ class Aliquots extends DBase{
    }
 
    /**
-    * The main search and sort function. searches for the searched item and if it is an aliquot determines its position and tray. if its a parent
-    * sample it sav $noOfAliquotses it. It also receives previous values that are automatically saved
-    *
-    * @param   string $add_message       An optional string with a message to be displayed
-    * @global  string $nextBox           The tray label to save the aliquot to
-    * @global  integer $nextPosition     The position in the next tray to save to
-    * @return <type>
+    * The main aliquoting function. Calls the appropriate methods to do the necessary functions
+    * 
+    * @return  Nothing
     */
-   private function SampleProcessing($add_message = ''){
-      $addinfo = '';
+   private function SampleProcessing(){
       echo '<form name="form" action="?page=sort_aliquots" method="POST" id="searchFormId">';      //start the form
       //check the aliquoting settings
       if(isset($_POST['aliquot_settings']) && is_array($_POST['aliquot_settings'])){
@@ -75,25 +134,20 @@ class Aliquots extends DBase{
             return;
          }
          $this->GenerateTopPanel();
-         $curData = array(
-             'errorClass' => 'error',
-             'parentSampleId' => ''
-         );
-         $this->GenerateLowerPanel($curData);
+         $this->GenerateLowerPanel();
       }
       else{
          $this->InitiateAliquotingProcess();     //we dont have the aliquot settings...meaning that we need to start the aliquoting process
          return;
       }
-      
       return;
-//======================================================================================================================================
    }
 
    /**
-    * Checks and verifies the aliquot settings to be used in this session. if the settings are not set, it sets them
-    *
-    * @return  integer    Returns 0 when all is set ok, and 1 when the settings are not set
+    * Merges the different aliquot settings that might be defined from the client side
+    * 
+    * @return  integer  0
+    * @todo    Add validation of the data at this point to avoid data validation being scattered all over the code
     */
    private function AliquotingSettings(){
       $this->settings = array_merge(
@@ -108,50 +162,12 @@ class Aliquots extends DBase{
             'aliquotIndex' => $_POST['aliquotIndex']
          )
       );
-//      $this->Dbase->CreateLogEntry("Settings\n".print_r($this->settings, true), 'debug');
-//      $this->Dbase->CreateLogEntry("POST:\n".print_r($_POST, true), 'debug');
+      $this->Dbase->CreateLogEntry($this->settings['searchItem'], 'aliquot');    //just log the way we are receiving the searched items
       return 0;
-/**      
-         $this->CreateLogEntry(print_r($this->settings, true));
-         $addinfo = '';
-         if(!isset($this->settings['parent_format']) || $this->settings['parent_format'] == '') $addinfo = "Please enter the parent sample format.";
-         if(!isset($this->settings['aliquot_format']) || $this->settings['aliquot_format'] == '') $addinfo = "Please enter the aliquout format.";
-         if(!is_numeric($this->settings['noOfAliquots'])) $addinfo = "Please enter the number of aliquots";
-         if(!isset($this->settings['trays']) || !is_array($this->settings['trays'])) $addinfo = "Please enter the tray details.";
-         if($addinfo != ''){
-            //something is missing, so offer to recreate everything again
-            ?>
-               <div id="aliquot_settings">
-                  <div id="addinfo"><?php echo $addinfo; ?></div>
-               <table>
-                  <tr><td>Parent Sample Format</td><td><input type='text' name='aliquot_settings[parent_format]' size="15" /></td>
-                     <td>Aliquot Format</td><td><input type='text' name='aliquot_settings[aliquot_format]' size="15" /></td>
-                     <td>No of Aliquots</td><td><input type='text' name='aliquot_settings[noOfAliquots]' size="3" id='aliquot_number_id' /></td></tr>
-                  <tr id='aliquotNos'>&nbsp;</tr>
-               </table>
-                  <div id='links'><input type='button' name='find' value='Save' onclick="Samples.search();" />
-                      <input type='button' name='cancel' value='Cancel' /></div>
-               </div>
-               <script type="text/javascript">
-                  $('#aliquot_number_id').bind('blur', Samples.generateAliquots);
-               </script>
-            <?php
-            return 1;   //there is an error in the defined settings. so this is the end of this thread
-         }
-         else{ //we have everything ok, so lets hide them, so to be used with the next request
-            $this->GenerateTopPanel();
-            return 0;
-         }
-         
-      $this->InitiateAliquotingProcess();
-      return 1;   //not really an error, but we return 1 to trick the system in closing the form and the user to proceed adding other data
-      //print_r($_POST);
-      return 0;
-*/
    }
    
    /**
-    * Saves an aliquot to the database. Does the integrity checks first before saving the aliquot
+    * Saves an aliquot to the database. Performs the integrity checks first before saving the aliquot
     * 
     * @return  mixed    Returns 0 if all goes ok, else it returns a string with a message of the error that has occurred.
     */
@@ -182,7 +198,7 @@ class Aliquots extends DBase{
          if($aliq == 1) return "There was an error while fetching data from the database.";
          elseif(count($aliq) + 1 > $this->settings['noOfAliquots']){
             //if there are enough aliquots it means we dont need to add another aliquot
-            return "Error! A sample can only have " . $this->settings['noOfAliquots'] . " aliquots.";
+            return "Error! A sample can only have {$this->settings['noOfAliquots']} aliquots.";
          }
 //      echo '<pre>'.print_r($this->settings, true).'</pre>';
          if(preg_match('/^' . $this->settings['trays_format2use'][$aliquotIndex] . '$/i', $save_tray) && ($save_position > 0 && $save_position <= $tray_size)){
@@ -206,11 +222,11 @@ class Aliquots extends DBase{
    }
    
    /**
-    * Check if the sample in the variable '$this->settings['searchItem']' is saved or not
+    * Initiates the saving of the sample which was previously scanned and then determines the saving parameters of the current aliquot
     * 
     * @return  mixed    Returns a string with the error message in case there was an error, else it returns an array with the current aliquot settings
     */
-   private function IsSavedAliquot(){
+   private function CurrentSampleSettings(){
       //check whether we have all the parent sample metadata
       if( isset($this->settings['parent_sample']) && !in_array($this->settings['parent_sample'], array('', 'undefined')) ){
          //check whether there is some saving that should take place before looking for other things
@@ -244,7 +260,8 @@ class Aliquots extends DBase{
             for($i = 0; $i < $this->settings['noOfAliquots']; $i++){
                if($i + 1 != $aliq[$i]['aliquot_number']){
                   $generated = true;
-                  $this->NewNextSlot($i);
+                  $res = $this->NewNextSlot($i);
+                  if(is_string($res)) return $res;
                   $curAliquotIndex = $i;
                   break;
                }
@@ -259,38 +276,16 @@ class Aliquots extends DBase{
             return $aliq;
          }
       }
-//      else{
-//         return 'We have an aliquot but no parent sample';
-//      }
-/*
-      //check if this aliquot has been saved before         
-      $this->Dbase->query = "select a.parent_sample, b.label, c.animal_id from aliquots as a inner join aliq_samples as b on a.parent_sample=b.id "
-              . "inner join aliq_animals as c on b.animal_id=c.id where a.label='{$this->settings['searchItem']}'";
-      $results = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
-      
-      $this->Dbase->CreateLogEntry('aliquot parents'.print_r($results, true), 'debug');
-      if($results == 1) return "There was an error while fetching data from the database.";
-      elseif(count($results) > 0){
-         $this->Dbase->query = "select * from aliquots where parent_sample='" . $results[0]['parent_sample'] . "' order by aliquot_number";
-         $aliq = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
-         if($aliq == 1) return "There was an error while fetching data from the database.";
-         else{
-            $animal = $results[0]['animal_id'];
-            $this->settings['parent_sample'] = $results[0]['label'];
-            return "The aliquot '$this->settings['searchItem']' has already been saved.";
-         }
-         $this->settings['save_position'] = '';
-         $this->settings['save_tray'] = '';
-      }
-*/
    }
 
    /**
-    * Calculates the next empty slot in the next box. This is the position where the current aliquot will be placed
+    * Calculates the next empty slot in the next box. This is the position where the current aliquot will be placed.
+    * 
+    * Since we expect to have multiple aliquots for each sample, we assign each aliquot an index which makes it easier for us to be able to 
+    * know to which tray it is going to be saved and which set validation criteria will be used
     *
-    * @param   string   $searchId
-    * @param   integer  $aliquotIndex
-    * @return  integer  Returns 0 on success, else returns 1
+    * @param   integer  $aliquotIndex  The index of the aliquot which we want to place
+    * @return  mixed    Returns a string with an error message in case of an error, else it returns 0
     */
    private function NewNextSlot($aliquotIndex){
       $trayType = strtolower($this->settings['trays_format2use'][$aliquotIndex]);  //type must be from 1-4
@@ -299,10 +294,8 @@ class Aliquots extends DBase{
               . "where a.tray is not null and a.position is not null and lower(a.tray) rlike '^$trayType$' $pat order by a.tray desc, a.position desc limit 0,1";
       $results = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
 //      $this->Dbase->CreateLogEntry('', 'debug', true);
-      if($results == 1){
-         $this->SearchSortResults($searchId, "There was an error while fetching data from the database.");
-         return 1;
-      }
+      if($results == 1) return "There was an error while determining the next slot.";
+      
       preg_match('/^[a-z]+/i', $trayType, $res);
       $trayPrefix = strtoupper($res[0]);
       preg_match('/\{[0-9]+\}/i', $trayType, $res);
@@ -324,185 +317,6 @@ class Aliquots extends DBase{
          }
       }
       return 0;
-   }
-
-   /**
-    * creates the output interface after sorting the aliquots. determines automagically where an aliquot ought to be placed and its corresponding location
-    *
-    * @global <array> $config    Contains the database connection preferences
-    * @global <string> $query      The global query string, will be used to log queries
-    * @global <string> $contact    A contact message should anything go wrong
-    * @global <string> $nextBox    The next tray in sequence to place the aliquot
-    * @global <integer> $nextPosition  The next position in the nextbox
-    * @param <string> $searchId    The aliquot id we are searching for
-    * @param <string> $addinfo     Any additional information that we might want to display
-    * @return <none>    Returns nothing. On successful completion it echoes the created contents
-    */
-   private function SearchSortResults($addinfo=''){
-      global $config, $query, $contact, $nextBox, $nextPosition;
-      $res = Connect2DB($config);
-      if(is_string($res)){
-         $this->SearchSortHome("There was an error while connecting to the database.$contact");
-         return;
-      }
-      $this->Dbase->query = "select * from aliquots where SourceID=(select SourceID from aliquots where AliquotID = '{$this->settings['searchItem']}') order by AliquotNo";
-      $results = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
-      //LogError();
-      if($results == 1){
-         $this->SearchSortHome("There was an error while fetching data from the database.$contact");
-         return;
-      }
-
-      $this->SearchSortHome($addinfo);
-      
-      
-?>
-   <div id='search_sort_results'>
-      <div id='animal_data'>
-         <table>
-<?php
-      if($results[0]['AnimalID'] == NULL) $results[0]['AnimalID'] = 'Error';
-?>
-            <tr>
-               <td colspan='2'>Animal Id: <b><?php echo "{$results[0]['AnimalID']}"; ?></b></td>
-               <td colspan='2'>Source Sample: <b><?php echo "{$results[0]['SourceID']}"; ?></b></td>
-            </tr>
-         </table>
-      </div>
-      <div id='aliquots'>
-         <form name="form" action="?page=update_positions" method="POST">
-         <table cellspacing='0'>
-            <tr><th class='left'>Destination</th><th>Aliquot</th><th>TrayId</th><th>Position in Tray</th></tr>
-<?php
-
-      $submit = false; //do we create the submit button or not
-      $box = "<input type='text' name='box' size='15px' value='$nextBox' />";
-      $position = "<input type='text' name='position' size='15px' value='$nextPosition' />";
-      
-
-      if(isset($results[3]['box']) && isset($results[3]['position'])){ //the aliquot has its place already
-         if(strcasecmp($results[3]['AliquotID'], $searchId) == 0) $class = 'kemri_aliquots';
-         else $class='';
-         $box = $results[3]['box'];
-         $position = $results[3]['position'];
-      }
-      elseif(!isset($results[3]['box']) && !isset($results[3]['position']) && strcasecmp($results[3]['AliquotID'], $searchId) == 0){ //we should assign a place to the aliquot
-         $class = 'kemri_aliquots';
-         $submit = true;
-         $res = NextSlot($searchId, 3);
-         if($res) return;
-         $box = "<input type='text' name='box' size='15px' value='$nextBox' />";
-         $position = "<input type='text' name='position' size='15px' value='$nextPosition' />";
-      }
-      else{
-         $class = '';
-         $box = '&nbsp;';
-         $position = '&nbsp;';
-      }
-      if(isset($results[3])){
-         echo "<tr class='$class'><td class='left'>KEMRI:</td><td>" . $results[3]['AliquotID'] . " (" . $results[3]['AliquotNo'] . ")</td><td>$box</td><td>$position</td></tr>";
-      }
-
-//ILRI aliquots
-      if(isset($results[1]['box']) && isset($results[1]['position'])){ //the aliquot has its place already
-         if(strcasecmp($results[1]['AliquotID'], $searchId) == 0) $class = 'ilri_aliquots';
-         else $class='';
-         $box = $results[1]['box'];
-         $position = $results[1]['position'];
-      }
-      elseif(!isset($results[1]['box']) && !isset($results[1]['position']) && strcasecmp($results[1]['AliquotID'], $searchId) == 0){ //we should assign a place to the aliquot
-         $class = 'ilri_aliquots';
-         $submit = true;
-         $res = NextSlot($searchId, 2);
-         if($res) return;
-         $box = "<input type='text' name='box' size='15px' value='$nextBox' />";
-         $position = "<input type='text' name='position' size='15px' value='$nextPosition' />";
-      }
-      else{
-         $class = '';
-         $box = '&nbsp;';
-         $position = '&nbsp;';
-      }
-      echo "<tr class='$class'><td class='left'>ILRI:</td><td>" . $results[1]['AliquotID'] . " (" . $results[1]['AliquotNo'] . ")</td><td>$box</td><td>$position</td></tr>";
-
-//ICIPE aliquots
-      if(isset($results[0]['box']) && isset($results[0]['position'])){ //the aliquot has its place already
-         if(strcasecmp($results[0]['AliquotID'], $searchId) == 0) $class = 'icipe_aliquots';
-         else $class='';
-         $box = $results[0]['box'];
-         $position = $results[0]['position'];
-      }
-      elseif(!isset($results[0]['box']) && !isset($results[0]['position']) && strcasecmp($results[0]['AliquotID'], $searchId) == 0){ //we should assign a place to the aliquot
-         $class = 'icipe_aliquots';
-         $submit = true;
-         $res = NextSlot($searchId, 1);
-         if($res) return;
-         $box = "<input type='text' name='box' size='15px' value='$nextBox' />";
-         $position = "<input type='text' name='position' size='15px' value='$nextPosition' />";
-      }
-      else{
-         $class = '';
-         $box = '&nbsp;';
-         $position = '&nbsp;';
-      }
-      echo "<tr class='$class'><td class='left'>ICIPE:</td><td>" . $results[0]['AliquotID'] . " (" . $results[0]['AliquotNo'] . ")</td><td>$box</td><td>$position</td></tr>";
-
-//KARI aliquots
-      if(isset($results[2]['box']) && isset($results[2]['position'])){ //the aliquot has its place already
-         if(strcasecmp($results[2]['AliquotID'], $searchId) == 0)
-            $class = 'kari_aliquots';
-         else
-            $class='';
-         $box = $results[2]['box'];
-         $position = $results[2]['position'];
-      }
-      elseif(isset($results[2]['box']) == NULL && isset($results[2]['position']) == NULL && strcasecmp($results[2]['AliquotID'], $searchId) == 0){ //we should assign a place to the aliquot
-         $class = 'kari_aliquots';
-         $submit = true;
-         $res = NextSlot($searchId, 4);
-         if($res)
-            return;
-         $box = "<input type='text' name='box' size='15px' value='$nextBox' />";
-         $position = "<input type='text' name='position' size='15px' value='$nextPosition' />";
-      }
-      else{
-         $class = '';
-         $box = '&nbsp;';
-         $position = '&nbsp;';
-      }
-
-
-      if($submit){
-         echo "<tr class='$class'><td>KARI:</td><td>" . $results[2]['AliquotID'] . " (" . $results[2]['AliquotNo'] . ")</td><td>$box</td><td>$position</td></tr>";
-         echo '<tr><td colspan="4" align="center" class="left bottom"><input type="submit" name="find" id="submitId" value="Update" /></td></tr>';
-         echo "<input type='hidden' name='aliquot' value='$searchId' />";
-      }
-      else{
-         echo "<tr class='$class'><td class='left bottom'>KEMRI:</td><td class='bottom'>" . $results[2]['AliquotID'] . " (" . $results[2]['AliquotNo'] . ")</td><td class='bottom'>$box</td><td class='bottom'>$position</td></tr>";
-      }
-      $content = <<<CONTENT
-         </table>
-       </form>
-      </div>
-   </div>
-CONTENT;
-      echo $content;
-   }
-
-   /**
-    * Creates the searching and sorting home page. to be used in aliquots sorting
-    */
-   private function SearchSortHome($addinfo=''){
-      if($addinfo == "")
-         $addinfo = "Enter or scan the aliquot you want to sort.";
-?>
-   <div id="search_form">
-      <form name="form" action="?page=searching_sorting" method="POST">
-         <span id="search_mssg"><?php echo "$addinfo"; ?></span><br />
-         <input type="text" name="searchItem" size="15px" id="searchItemId" value="" />   <input type="submit" name="find" id="submitId" value="FIND" />
-      </form>
-   </div>
-<?php
    }
    
    /**
@@ -531,7 +345,7 @@ CONTENT;
     * Generates the top panel with the settings currently being used
     *
     * @param   array    $aliq    An array with the data which the user has already defined
-    * @return  HTML     Returns the HTML code that will be used to create this top panel
+    * @return  string   Returns the HTML code that will be used to create this top panel
     */
    private function GenerateTopPanel(){
       $this->settings['aliquot_format'] = strtoupper($this->settings['aliquot_format']);
@@ -575,82 +389,69 @@ CONTENT;
       }
 
    /**
-    * Generates the lower panel that shows the searched sample details as well as where an aliquot should be stored
-    * 
-    * @param   array    $curData
-    * @param   array    $aliquots 
+    * Generates the lower panel that shows the searched sample details as well as where an aliquot should be or is stored
     */
-   private function GenerateLowerPanel($curData){
+   private function GenerateLowerPanel(){
+      $errorClass = 'error';
+      $parentSampleId = '';
+      $addinfo = '';
+      $aliquots = array();
+      
       if(isset($this->settings['searchItem']) && !in_array($this->settings['searchItem'], array('', 'undefined'))){
          //check if we have a parent aliquot
          //as long as we have a search item, check if we need to save the sample
-         $res = $this->IsSavedAliquot();
-         if(is_string($res)){
-            $addinfo = $res;
-            $aliquots = array();
-         }
+         $res = $this->CurrentSampleSettings();
+         if(is_string($res)) $addinfo = $res;
          else{
             if(preg_match('/^' . $this->settings['parent_format2use'] . '$/i', $this->settings['searchItem'])){
                $res = $this->IsParentSample();
-               if(is_string($res)){
-                  $addinfo = $res;
-                  $aliquots = array();
-               }
+               if(is_string($res)) $addinfo = $res;
                else $aliquots = $res;
             }
-            elseif(preg_match("/^".$this->settings['aliquot_format2use']."$/i", $this->settings['searchItem'])){
-               $aliquots = $res;
-            }
-            else{
-               $addinfo = 'Unrecognized Sample. Try again';
-            }
+            elseif(preg_match("/^".$this->settings['aliquot_format2use']."$/i", $this->settings['searchItem'])) $aliquots = $res;
+            else $addinfo = 'Unrecognized Sample. Try again';
          }
-         //ok now we good
-         $curData['addinfo'] = $addinfo;
+         
+         //ok now we r good
          $searchedSample = "Searched Sample: <b>{$this->settings['searchItem']}</b>";
       }
       else{
          $addinfo = 'Please enter or scan a sample.';
-         $curData['errorClass'] = 'no_error';
-         $aliquots = array();
+         $errorClass = 'no_error';
          $searchedSample = '&nbsp;';
       }
       if($addinfo == '' || !isset($addinfo)){
          $addinfo = 'Enter or scan the aliquot you want to sort.';
-         $curData['errorClass'] = 'no_error';
+         $errorClass = 'no_error';
       }
       
-      $curData['addinfo'] = $addinfo;
-      
 echo <<<Content
-      <div id="search_form">
-            <span id="search_mssg">
-               {$curData['add_message']}
-               <div class='{$curData['errorClass']}'>
-                  {$curData['addinfo']}<br />$searchedSample
-               </div>
-            </span><br />
-            <input type="text" name="searchItem" size="15px" id="searchItemId" value="" onkeyup="Samples.simulateEnterButton(event);" />
-            <input type="button" name="find" id="submitId" value="FIND" onClick="Samples.search();" />
-            <input type="hidden" value="{$this->settings['searchItem']}" name="prevSample" id="prevSampleId" />
-            <input type="hidden" value="{$this->settings['parent_sample']}" name="parent" id="parentSampleId" />
-            <input type="hidden" value="{$this->settings['animal']}" name="curAnimal" id="animalId" />
-            <input type="hidden" value="{$this->settings['save_tray']}" name="nextTray" id="parentSampleId" />
-            <input type="hidden" value="{$this->settings['save_position']}" name="nextPosition" id="animalId" />
+   <div id="search_form">
+      <span id="search_mssg">
+      <div class='$errorClass'>
+         $addinfo<br />$searchedSample
+      </div>
+      </span><br />
+      <input type="text" name="searchItem" size="15px" id="searchItemId" value="" onkeyup="Samples.simulateEnterButton(event);" />
+      <input type="button" name="find" id="submitId" value="FIND" onClick="Samples.search();" />
+      <input type="hidden" value="{$this->settings['searchItem']}" name="prevSample" id="prevSampleId" />
+      <input type="hidden" value="{$this->settings['parent_sample']}" name="parent" id="parentSampleId" />
+      <input type="hidden" value="{$this->settings['animal']}" name="curAnimal" id="animalId" />
+      <input type="hidden" value="{$this->settings['save_tray']}" name="nextTray" id="parentSampleId" />
+      <input type="hidden" value="{$this->settings['save_position']}" name="nextPosition" id="animalId" />
 
-         <div id='search_sort_results'>
-            <div id='animal_data'>
-               <table>
-                  <tr><td colspan='2'>Animal Id: <b>{$this->settings['animal']}</b></td><td colspan='2'>Source Sample: <b>{$this->settings['parent_sample']}</b></td></tr>
-                  <tr class='last_row'><td colspan='2'>Organism: <b>{$this->settings['organism']}</b></td><td colspan='2'>Comments: <b>{$curData['comment']}</b></td></tr>
-               </table>
-            </div>
-            <div id='aliquots'>
-               <table cellspacing='0'>
-                  <tr><th class='left'>Destination</th><th>Aliquot</th><th>TrayId</th><th>Position in Tray</th><th>Actions</th></tr>
+      <div id='search_sort_results'>
+         <div id='animal_data'>
+            <table>
+               <tr><td colspan='2'>Animal Id: <b>{$this->settings['animal']}</b></td><td colspan='2'>Source Sample: <b>{$this->settings['parent_sample']}</b></td></tr>
+               <tr class='last_row'><td colspan='2'>Organism: <b>{$this->settings['organism']}</b></td><td colspan='2'>Comments: <b>{$this->settings['comment']}</b></td></tr>
+            </table>
+         </div>
+         <div id='aliquots'>
+            <table cellspacing='0'>
+               <tr><th class='left'>Destination</th><th>Aliquot</th><th>TrayId</th><th>Position in Tray</th><th>Actions</th></tr>
 Content;
             
-//      $this->CreateLogEntry(print_r($aliquots, true), 'debug');
       /**
        * This is the point where the trays as defined and the defined aliquots converge. This system relies on one setting, ie
        * the trays as defined corresponds to the aliquot number, as they will be entered/scanned. So at this stage, since we ordered the aliquots
@@ -679,10 +480,6 @@ Content;
              * check which insitution is not on the list of assignedTrays and get the first one which is not defined.
              */
             $t = array_diff($this->settings['just_trays'], $assignedTrays);
-//         echo '<pre>'.print_r($assignedTrays['just_trays'], true).'</pre>';
-//         echo '<pre>'.print_r($assignedTrays, true).'</pre>';
-//         echo '<pre>'.print_r($t, true).'</pre>';
-//         echo key($t);
             $predTray = $this->settings['trays'][key($t)];
          }
          $assignedTrays[] = $predTray['name'];

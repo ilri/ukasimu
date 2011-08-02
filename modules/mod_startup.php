@@ -1,10 +1,13 @@
 <?php
+
 /**
  * This is the worker who is never recognised. Includes all the necessary files. Initializes a session if need be. Processes the main GET or POST
  * elements and includes necessary files. Calls the necessary functions/methods
  * 
- * @author Kihara Absolomon <a.kihara@cgiar.org>
- * @since v0.1
+ * @category   Aliquoting
+ * @package    Startup
+ * @author     Kihara Absolomon <a.kihara@cgiar.org>
+ * @since      v1.0
  */
 define('OPTIONS_COMMON_FOLDER_PATH', '/var/www/common/');
 
@@ -65,7 +68,7 @@ define('OPTIONS_MSSG_USERREPLY_SYSTEM_ERROR','Well this is embarassing! The syst
 /**
  * Set the default footer links
  */
-$Aliquots->footerLinks = "<a href='$pageref'>Home</a>";
+$Aliquots->footerLinks = "<a href='?'>Home</a>";
 
 $Aliquots->TrafficController();
 ?>
