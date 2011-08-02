@@ -1,4 +1,23 @@
 <?php
+/**
+* Copyright 2011 ILRI
+* 
+* This file is part of <aliquoter>.
+* 
+* <aliquoter> is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+* 
+* <aliquoter> is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+* 
+* You should have received a copy of the GNU General Public License
+* along with <aliquoter>.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 
 /**
  * This is the main class that will do all the hard work of aliquoting. It keeps track of the current settings, determines automagically where
@@ -39,43 +58,99 @@ class Aliquots extends DBase{
     * 
     * <code>
     * Array
-	 *	(
-	 *	    [parent_format] => BDT 6
-	 *	    [aliquot_format] => AVAQ 5
-	 *	    [noOfAliquots] => 3
-	 *	    [trays] => Array
-	 *	        (
-	 *	            [0] => Array
-	 *	                (
-	 *	                    [name] => TAVQC 5
-	 *	                    [descr] => ICIPE
-	 *	                    [size] => 81
-	 *	                )
-	 *	
-	 *	            [1] => Array
-	 *	                (
-	 *	                    [name] => TAVQA 5
-	 *	                    [descr] => DVS
-	 *	                    [size] => 81
-	 *	                )
-	 *	
-	 *	            [2] => Array
-	 *	                (
-	 *	                    [name] => TAVQL 5
-	 *	                    [descr] => ILRI
-	 *	                    [size] => 100
-	 *	                )
-	 *	
-	 *	        )
-	 *	
-	 *	    [searchItem] => AVAQ09091
-	 *	    [parent_sample] => BDT068460
-	 *	    [animal] => SON, SON00104, S008
-	 *	    [save_tray] => TAVQA00001
-	 *	    [save_position] => 1
-	 *	    [prev_sample] => AVAQ07476
-	 *	    [aliquotIndex] => 1
-	 *	)
+	 * (
+	 *     [parent] => Array
+	 *         (
+	 *             [label] => BDT068485
+	 *             [comment] => 
+	 *             [organism] => cattle
+	 *             [animal] => SON, SON00105, S011
+	 *         )
+	 * 
+	 *     [aliquot2save] => Array
+	 *         (
+	 *         )
+	 * 
+	 *     [settings] => Array
+	 *         (
+	 *             [parent_format] => BDT 6
+	 *             [aliquot_format] => AVAQ 5
+	 *             [noOfAliquots] => 3
+	 *             [trays] => Array
+	 *                 (
+	 *                     [0] => Array
+	 *                         (
+	 *                             [name] => TAVQC 5
+	 *                             [descr] => ICIPE
+	 *                             [size] => 81
+	 *                             [format2use] => TAVQC[0-9]{5}
+	 *                             [just_trays] => TAVQC 5
+	 *                         )
+	 * 
+	 *                     [1] => Array
+	 *                         (
+	 *                             [name] => TAVQA 5
+	 *                             [descr] => DVS
+	 *                             [size] => 81
+	 *                             [format2use] => TAVQA[0-9]{5}
+	 *                             [just_trays] => TAVQA 5
+	 *                         )
+	 * 
+	 *                     [2] => Array
+	 *                         (
+	 *                             [name] => TAVQL 5
+	 *                             [descr] => ILRI
+	 *                             [size] => 100
+	 *                             [format2use] => TAVQL[0-9]{5}
+	 *                             [just_trays] => TAVQL 5
+	 *                         )
+	 * 
+	 *                 )
+	 * 
+	 *             [aliquot_format2use] => AVAQ[0-9]{5}
+	 *             [parent_format2use] => BDT[0-9]{6}
+	 *         )
+	 * 
+	 *     [searchItem] => AVAQ07477
+	 *     [presaved_sample] => 1
+	 *     [currentAliquots] => Array
+	 *         (
+	 *             [0] => Array
+	 *                 (
+	 *                     [id] => 59
+	 *                     [label] => AVAQ07477
+	 *                     [parent_sample] => 14
+	 *                     [aliquot_number] => 1
+	 *                     [tray] => TAVQC00001
+	 *                     [position] => 2
+	 *                     [parent] => BDT068485
+	 *                 )
+	 * 
+	 *             [1] => Array
+	 *                 (
+	 *                     [id] => 60
+	 *                     [label] => AVAQ35442
+	 *                     [parent_sample] => 14
+	 *                     [aliquot_number] => 2
+	 *                     [tray] => TAVQA00001
+	 *                     [position] => 2
+	 *                     [parent] => BDT068485
+	 *                 )
+	 * 
+	 *             [2] => Array
+	 *                 (
+	 *                     [id] => 61
+	 *                     [label] => AVAQ07468
+	 *                     [parent_sample] => 14
+	 *                     [aliquot_number] => 3
+	 *                     [tray] => TAVQL00001
+	 *                     [position] => 2
+	 *                     [parent] => BDT068485
+	 *                 )
+	 * 
+	 *         )
+	 * 
+	 * )
     * </code>
     */
    private $settings;
@@ -96,7 +171,10 @@ class Aliquots extends DBase{
     * Controls the program execution
     */
    public function TrafficController(){
-      if(OPTIONS_REQUESTED_MODULE == '') $this->HomePage();
+      if(OPTIONS_REQUESTED_MODULE == ''){
+         $this->footerLinks = '';
+         $this->HomePage();
+      }
       elseif(OPTIONS_REQUESTED_MODULE == 'sort_aliquots'){
          $this->SampleProcessing();
          $this->footerLinks .= " | <a href=''>Sort Home</a>";
@@ -113,7 +191,7 @@ class Aliquots extends DBase{
 <div>
    <div id='addinfo'><?php echo "$addinfo"; ?></div>
    <ol class='ol_li'>
-      <li><a href="?page=sort_aliquots">Sort Aliquots</a></li>
+      <li><a href="?page=sort_aliquots">Aliquot Samples</a></li>
       <li><a href="?page=merge">Merge different collections</a></li>
       <li><a href="?page=backup">Backup</a></li>
    </ol>
