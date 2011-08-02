@@ -8,6 +8,7 @@ var Samples = {
       {tray: 'TAVQA 5', description: 'DVS', size: 81},
       {tray: 'TAVQL 5', description: 'ILRI', size: 100}
    ),
+      
    /**
     * Submits the parameters as defined by the user for processing
     */
@@ -16,7 +17,8 @@ var Samples = {
          //check that the trays are in the right shape
          var i=0;
          $.each($('.tray_name'), function(){
-            i++;this.value = this.value.trim().toUpperCase();
+            i++;
+            this.value = this.value.trim().toUpperCase();
             if(this.value == undefined || this.value == '' || !reg.test(this.value)){
                alert("Please enter the tray format that we are expecting for tray "+i+"!\nThe format should be something like 'TAVQC 5' meaning that the tray name has the prefix TAVQC and 5 digits.");
                errors = true;
@@ -26,7 +28,8 @@ var Samples = {
          if(errors) return;
          i=0;errors = false;
          $.each($('.tray_size'), function(){
-            i++;this.value = this.value.trim();
+            i++;
+            this.value = this.value.trim();
             if(this.value==='undefined' || isNaN(this.value) || this.value===''){
                alert("Please enter a valid tray size for tray #"+i);
                return;
@@ -38,38 +41,33 @@ var Samples = {
          Main.ajaxParams.div2Update='main_div';
          Main.ajaxParams.successMssg='Successfully updated.';
          notificationMessage({create:true, hide:false, updatetext:false, text:'Searching...'});
-         params=$('#searchFormId').formSerialize();
-         $.ajax({type:"POST", url:'mod_ajax_calls.php?page=sort_aliquots', data:params, dataType:'text', success:Samples.updateInterface});
+         params = $('#searchFormId').formSerialize();
+         if(Samples.parent != undefined) params += '&parent='+$.toJSON(Samples.parent);
+         if(Samples.settings != undefined) params += '&settings='+$.toJSON(Samples.settings);
+         if(Samples.aliquot2save != undefined) params += '&aliquot2save='+$.toJSON(Samples.aliquot2save);
+         if($('#nextPositionId').length != 0) params += '&nextPosition='+$('#nextPositionId').val();
+         if($('#nextTrayId').length != 0) params += '&nextTray='+$('#nextTrayId').val();
+         if($('#searchItemId').length != 0) params += '&searchItem='+$('#searchItemId').val();
+         $.ajax({type:"POST", url:'mod_ajax_calls.php?page=sort_aliquots', data:params, dataType:'html', success:Samples.updateInterface});
          $('#searchItemId').focus();
    },
 
    updateInterface: function(data){
-      var message, err=true;
-      var resp=data.split('$$');
-      if(Main.ajaxParams.successMssg!=undefined) message=Main.ajaxParams.successMssg;
-      else message='The changes have been successfully saved.';
-      if(resp[0]=='error') message=resp[1];
-      else if(resp[0]=='no_error'){
-         if(Main.ajaxParams.div2Update) getObject(Main.ajaxParams.div2Update).innerHTML=resp[1];
-         if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
-         err=false;
+      var message, err = true;
+      if(data.substr(0,2) == '-1') message = data.substring(2,data.length);
+      else{
+         if(Main.ajaxParams.successMssg != undefined) message = Main.ajaxParams.successMssg;
+         else message = 'The changes have been successfully saved.';
+         err = false;
+         if(Main.ajaxParams.div2Update != undefined) $('#'+Main.ajaxParams.div2Update).html(data);
+         
       }
-      else if(resp[0].substr(0,2)=='-1') message=resp[0].substring(2,resp[0].length);
-      else if(resp[0]=='new'){    //we have no error
-         if(Main.ajaxParams.div2Update!=undefined) getObject(Main.ajaxParams.div2UpdateNew).innerHTML=resp[1];
-         if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
-         err=false;
-      }
-      else{    //we have no error
-         if(Main.ajaxParams.div2Update!=undefined) getObject(Main.ajaxParams.div2Update).innerHTML=resp[0];
-         if(resp[2]!=undefined) $('#addinfoId').attr({innerHTML:resp[2]});
-         err=false;
-      }
+      
       if($('#notification_box')!=undefined){
          notificationMessage({create:false, hide:true, updateText:true, text:message, error:err});
       }
       $('#searchItemId').focus();
-},
+   },
 
    /**
     * Generates placeholder for defining the kind of trays that we are using

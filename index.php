@@ -7,10 +7,10 @@
     <link rel='stylesheet' type='text/css' href='../common/common.css'>
     <link rel='stylesheet' type='text/css' href='../common/mssg_box.css'>
      <script type='text/javascript' src='../common/jquery-1.6.1.min.js'></script>
-     <script type='text/javascript' src='../common/common.js'></script>
-     <script type='text/javascript' src='js/sample_search.js'></script>
      <script type='text/javascript' src='../common/jquery.form.js'></script>
      <script type='text/javascript' src='../common/jquery.json.js'></script>
+     <script type='text/javascript' src='../common/common.js'></script>
+     <script type='text/javascript' src='js/sample_search.js'></script>
   </head>
   <body>
      <table id='maintable'><tr><td width="auto">
