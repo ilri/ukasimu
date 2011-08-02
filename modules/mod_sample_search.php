@@ -179,6 +179,9 @@ class Aliquots extends DBase{
          $this->SampleProcessing();
          $this->footerLinks .= " | <a href=''>Sort Home</a>";
       }
+      elseif(OPTIONS_REQUESTED_MODULE == 'backup'){
+         $this->GenerateDbBackup();
+      }
    }
    
    /**
@@ -649,6 +652,10 @@ Content;
       $this->settings['aliquot2save']['nextPosition'] = $nextPosition;
       $this->settings['aliquot2save']['aliquotIndex'] = $aliquotIndex;
       return 0;
+   }
+   
+   private function GenerateDbBackup(){
+      
    }
 }
 ?>

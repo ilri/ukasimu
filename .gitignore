@@ -2,5 +2,6 @@ nbproject/
 errors/
 uploadedFiles/
 *.sql
+*.zip
 *.svn
 main_old.php
