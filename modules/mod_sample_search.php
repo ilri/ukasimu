@@ -179,9 +179,7 @@ class Aliquots extends DBase{
          $this->SampleProcessing();
          $this->footerLinks .= " | <a href=''>Sort Home</a>";
       }
-      elseif(OPTIONS_REQUESTED_MODULE == 'backup'){
-         $this->GenerateDbBackup();
-      }
+      elseif(OPTIONS_REQUESTED_MODULE == 'backup') $this->CreateDbDump();
    }
    
    /**
@@ -196,7 +194,7 @@ class Aliquots extends DBase{
    <ol class='ol_li'>
       <li><a href="?page=sort_aliquots">Aliquot Samples</a></li>
       <li><a href="?page=merge">Merge different collections</a></li>
-      <li><a href="?page=backup">Backup</a></li>
+      <li><a href="mod_ajax_calls.php?page=backup">Backup</a></li>
    </ol>
 </div>
 <?php
@@ -653,9 +651,35 @@ Content;
       $this->settings['aliquot2save']['aliquotIndex'] = $aliquotIndex;
       return 0;
    }
-   
-   private function GenerateDbBackup(){
-      
+
+   /**
+    * Creates a dbase dump of the current database and forces a download.
+    * 
+    * @todo    Handle the error cases well. If there is an error, an incorrect download will still be forced to the user
+    */
+   private function CreateDbDump(){
+      $res = $this->CreateDbSnapshot($this->config, 'dbase_dumps', 'user_initiated');
+      if(is_string($res) || !file_exists($res[0])){
+         $this->Dbase->CreateLogEntry($res, 'fatal');
+         //since we are having an error and this was an ajax call, we shall have to recreate the interface again thru a thrupass call
+         $fd = fopen($_SERVER['HTTP_REFERER'], 'r');
+         fpassthru($fd);
+//            $this->Home('There was an error while generating a current database dump. Please do it manually');
+      }
+      else{    //lets send the file back to the user
+         header('Content-Description: File Transfer');
+         header('Content-Type: application/octet-stream');
+         header('Content-Disposition: attachment; filename=' . basename($res[0]));
+         header('Content-Transfer-Encoding: binary');
+         header('Expires: 0');
+         header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+         header('Pragma: public');
+         header('Content-Length: ' . filesize($res[0]));
+         ob_clean();
+         flush();
+         readfile($res[0]);
+         exit;
+      }
    }
 }
 ?>

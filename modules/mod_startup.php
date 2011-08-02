@@ -31,7 +31,7 @@
  */
 define('OPTIONS_COMMON_FOLDER_PATH', '/var/www/common/');
 
-require_once OPTIONS_COMMON_FOLDER_PATH.'mod_general_v0.3.php';
+require_once OPTIONS_COMMON_FOLDER_PATH.'mod_general_v0.4.php';
 require_once 'sample_search_config';
 require_once OPTIONS_COMMON_FOLDER_PATH.'mod_objectbased_dbase_v0.6.php';
 require_once 'mod_sample_search.php';
