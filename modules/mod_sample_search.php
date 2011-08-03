@@ -2,20 +2,20 @@
 /**
 * Copyright 2011 ILRI
 * 
-* This file is part of <aliquoter>.
+* This file is part of ukasimu.
 * 
-* <aliquoter> is free software: you can redistribute it and/or modify
+* ukasimu is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 * 
-* <aliquoter> is distributed in the hope that it will be useful,
+* ukasimu is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 * 
 * You should have received a copy of the GNU General Public License
-* along with <aliquoter>.  If not, see <http://www.gnu.org/licenses/>.
+* along with ukasimu.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
@@ -342,12 +342,30 @@ echo "
             if(preg_match('/^' . $this->settings['settings']['parent_format2use'] . '$/i', $this->settings['searchItem'])){
                $res = $this->IsParentSample();
                if(is_string($res)) $addinfo = $res;
+               else{
+                  $aliquots = $res;
+                  $this->settings['currentAliquots'] = array();
+//                  $this->Dbase->CreateLogEntry("Parented samples:\n".print_r($res, true), 'debug');
+//                  $this->Dbase->CreateLogEntry("Parented samples settings:\n".print_r($this->settings, true), 'debug');
+               }
+            }
+            elseif(preg_match("/^".$this->settings['settings']['aliquot_format2use']."$/i", $this->settings['searchItem'])){
+               //check if we have the parent sample defined for this
+//               $this->Dbase->CreateLogEntry("Settings when having an aliquot:\n".print_r($this->settings, true), 'debug');
+               if(!isset($this->settings['parent']['label'])){
+                  $addinfo = 'Error! There is no parent sample defined for this aliquot, <b>please scan a parent sample first!</b>';
+               }
                else $aliquots = $res;
             }
-            elseif(preg_match("/^".$this->settings['settings']['aliquot_format2use']."$/i", $this->settings['searchItem'])) $aliquots = $res;
-            else $addinfo = 'Unrecognized Sample. Try again';
+            else{
+               $addinfo = 'Unrecognized Sample. Try again';
+               //clear all the parent and aliquot fields. jst remain with the searched sample field
+//               $this->Dbase->CreateLogEntry("Unrecognised sample:\n".print_r($this->settings, true), 'debug');
+               $this->settings['parent'] = array();
+               $this->settings['aliquot2save'] = array();
+               $aliquots = array();
+            }
          }
-         
          //ok now we r good
          $searchedSample = "Searched Sample: <b>{$this->settings['searchItem']}</b>";
       }
@@ -364,7 +382,7 @@ echo "
       $aliquot2save = (!isset($this->settings['aliquot2save'])) ? 'undefined' : json_encode($this->settings['aliquot2save']);
       $settings = json_encode($this->settings['settings']);
       
-      $this->Dbase->CreateLogEntry("Settings:\n".print_r($this->settings, true), 'debug');
+//      $this->Dbase->CreateLogEntry("Settings being saved:\n".print_r($this->settings, true), 'debug');
       if(count($aliquots) == 0 && count($this->settings['currentAliquots']) != 0) $aliquots = $this->settings['currentAliquots'];
       
 echo <<<Content
@@ -515,7 +533,7 @@ Content;
                //fetch the parent sample metadata from the db
                $this->IsParentSample($aliq[0]['parent']);
 //               $this->Dbase->CreateLogEntry("Settings:\n".print_r($this->settings['currentAliquots'], true), 'debug');
-               return "Error! The sample '{$this->settings['searchItem']}' has already been saved before.";
+               return "Error! The sample <b>{$this->settings['searchItem']}</b> has already been saved before.";
             }
             $animal = $results[0]['animal_id'];
             //check if there are other aliquots from this sample
@@ -560,7 +578,7 @@ Content;
       $tray_size = $this->settings['settings']['trays'][$aliquotIndex]['size'];
       $trayFormat = $this->settings['settings']['trays'][$aliquotIndex]['format2use'];
       $parentSample = $this->settings['parent']['label'];
-      $this->Dbase->CreateLogEntry("Settings while saving:\n".print_r($this->settings, true), 'debug');
+//      $this->Dbase->CreateLogEntry("Settings while saving:\n".print_r($this->settings, true), 'debug');
       
   /*    
       $this->Dbase->CreateLogEntry(
@@ -572,20 +590,21 @@ Content;
         Aliquot Index => $aliquotIndex", 'debug'
       );
 */
-      //we have something to save, so save it, bt first confirm that the aliquot is right
-      if(preg_match('/^' . $this->settings['settings']['aliquot_format2use'] . '$/i', $prev_sample) && isset($save_tray) && $save_tray != '' && is_numeric($save_position) 
+      //we have something to save, so save it, bt first confirm that the aliquot is right and the tray is ok
+      if(preg_match('/^' . $this->settings['settings']['aliquot_format2use'] . '$/i', $prev_sample) && preg_match('/^' . $trayFormat . '$/i', $save_tray) && is_numeric($save_position) 
               && is_numeric($aliquotIndex)){
          
          //check if there are other aliquots from this sample
-         $this->Dbase->query = "select * from aliquots as a inner join aliq_samples as b on a.parent_sample=b.id where b.label='$parentSample' order by a.aliquot_number";
+         $this->Dbase->query = "select a.* from aliquots as a inner join aliq_samples as b on a.parent_sample=b.id where b.label='$parentSample' order by a.aliquot_number";
          $aliq = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
          if($aliq == 1) return "There was an error while fetching data from the database.";
          elseif(count($aliq) + 1 > $this->settings['settings']['noOfAliquots']){
             //if there are enough aliquots it means we dont need to add another aliquot
+//            $this->Dbase->CreateLogEntry("Settings when > 3 aliqs:\n".print_r($this->settings, true), 'debug');
             return "Error! A sample can only have {$this->settings['settings']['noOfAliquots']} aliquots.";
          }
 //      echo '<pre>'.print_r($this->settings, true).'</pre>';
-         if(preg_match('/^' . $trayFormat . '$/i', $save_tray) && ($save_position > 0 && $save_position <= $tray_size)){
+         if($save_position > 0 && $save_position <= $tray_size){
             $parentSampleId = $this->Dbase->GetSingleRowValue('aliq_samples', 'id', 'label', $parentSample);
             if($parentSampleId == -2){
                return "There was an error while fetching data from the database.";
@@ -595,12 +614,12 @@ Content;
                $cols = array('label', 'parent_sample', 'aliquot_number', 'tray', 'position');
                $colvals = array(strtoupper($prev_sample), $parentSampleId, $aliqNo, $save_tray, $save_position);
                $results = $this->Dbase->InsertData("aliquots", $cols, $colvals);
-               if($results == 1) return "There was an error while saving the aliquot $prev_sample.";
+               if($results == 1) return "There was an error while saving the aliquot <b>$prev_sample</b>.";
                return 0;
                //echo "save this $save_aliquot $save_position $save_tray";
             }
          }
-         else return "Unable to save $prev_sample($aliqNo) in tray $save_tray at position $save_position.";
+         else return "Unable to save <b>$prev_sample($aliqNo)</b> in tray <b>$save_tray</b> at position <b>$save_position</b>.";
       }
       else return 0;
    }
