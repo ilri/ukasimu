@@ -33,45 +33,29 @@ var Samples = {
     * Submits the parameters as defined by the user for processing
     */
    search: function(){
-      var params, settings, reg = /^[A-Z0-9]{4,5}\s[0-9]$/i, errors = false;
-         //check that the trays are in the right shape
-         var i=0;
-         $.each($('.tray_name'), function(){
-            i++;
-            this.value = this.value.trim().toUpperCase();
-            if(this.value == undefined || this.value == '' || !reg.test(this.value)){
-               alert("Please enter the tray format that we are expecting for tray "+i+"!\nThe format should be something like 'TAVQC 5' meaning that the tray name has the prefix TAVQC and 5 digits.");
-               errors = true;
-               return;
-            }
-         });
-         if(errors) return;
-         i=0;errors = false;
-         $.each($('.tray_size'), function(){
-            i++;
-            this.value = this.value.trim();
-            if(this.value==='undefined' || isNaN(this.value) || this.value===''){
-               alert("Please enter a valid tray size for tray #"+i);
-               return;
-            }
-         });
-         if(errors) return;
-         if(Main.ajaxParams==undefined) Main.ajaxParams={};
-         Main.ajaxParams.result=undefined;
-         Main.ajaxParams.div2Update='main_div';
-         Main.ajaxParams.successMssg='Successfully updated.';
-         notificationMessage({create:true, hide:false, updatetext:false, text:'Searching...'});
-         params = $('#searchFormId').formSerialize();
-         if(Samples.parent != undefined) params += '&parent='+$.toJSON(Samples.parent);
-         if(Samples.settings != undefined) params += '&settings='+$.toJSON(Samples.settings);
-         if(Samples.aliquot2save != undefined) params += '&aliquot2save='+$.toJSON(Samples.aliquot2save);
-         if($('#nextPositionId').length != 0) params += '&nextPosition='+$('#nextPositionId').val();
-         if($('#nextTrayId').length != 0) params += '&nextTray='+$('#nextTrayId').val();
-         if($('#searchItemId').length != 0) params += '&searchItem='+$('#searchItemId').val();
-         $.ajax({type:"POST", url:'mod_ajax_calls.php?page=sort_aliquots', data:params, dataType:'html', success:Samples.updateInterface});
-         $('#searchItemId').focus();
+      var params;
+      //lets check for errors
+      if(Samples.validateInputs() == 1) return;
+      
+      if(Main.ajaxParams==undefined) Main.ajaxParams={};
+      Main.ajaxParams.result=undefined;
+      Main.ajaxParams.div2Update='main_div';
+      Main.ajaxParams.successMssg='Successfully updated.';
+      notificationMessage({create:true, hide:false, updatetext:false, text:'Searching...'});
+      params = $('#searchFormId').formSerialize();
+      if(Samples.parent != undefined) params += '&parent='+$.toJSON(Samples.parent);
+      if(Samples.settings != undefined) params += '&settings='+$.toJSON(Samples.settings);
+      if(Samples.aliquot2save != undefined) params += '&aliquot2save='+$.toJSON(Samples.aliquot2save);
+      if($('#nextPositionId').length != 0) params += '&nextPosition='+$('#nextPositionId').val();
+      if($('#nextTrayId').length != 0) params += '&nextTray='+$('#nextTrayId').val();
+      if($('#searchItemId').length != 0) params += '&searchItem='+$('#searchItemId').val();
+      $.ajax({type:"POST", url:'mod_ajax_calls.php?page=sort_aliquots', data:params, dataType:'html', success:Samples.updateInterface});
+      $('#searchItemId').focus();
    },
 
+   /**
+    * Updates the interface with some data from the server
+    */
    updateInterface: function(data){
       var message, err = true;
       if(data.substr(0,2) == '-1') message = data.substring(2,data.length);
@@ -80,7 +64,6 @@ var Samples = {
          else message = 'The changes have been successfully saved.';
          err = false;
          if(Main.ajaxParams.div2Update != undefined) $('#'+Main.ajaxParams.div2Update).html(data);
-         
       }
       
       if($('#notification_box')!=undefined){
@@ -93,28 +76,9 @@ var Samples = {
     * Generates placeholder for defining the kind of trays that we are using
     */
    generateAliquots: function(){
-      var count=$('#aliquot_number_id').val(), content='', reg;
-      var parent_format = $('#parent_format').val().trim().toUpperCase(), aliquot_format = $('#aliquot_format').val().trim().toUpperCase();
-      if(count==='undefined' || isNaN(count) || count===''){
-         alert("Please enter a valid number of aliquots");
-         $('#aliquot_number_id').focus();
-         return;
-      }
-      else if('//'){
-
-      }
-      //check that the user has entered the correct aliquot and parent format
-      reg = /^[A-Z0-9]{3,4}\s[0-9]$/i
-      if(parent_format=='undefined' || parent_format=='' ||  !reg.test(parent_format)){
-         alert("Please enter the parent format that we are expecting!\nThe format should be something like 'BSR 6' meaning that a parent has the prefix BSR and 6 digits.");
-         $('#parent_format').focus();
-         return;
-      }
-      if(aliquot_format=='undefined' || aliquot_format=='' || !reg.test(aliquot_format)){
-         alert("Please enter the aliquot formt to expect.\nThe format should be something like 'AVAQ 5' meaning that each aliquot will have the prefix AVAQ and 5 digits.");
-         $('#aliquot_format').focus();
-         return;
-      }
+      var count=$('#aliquot_number_id').val(), content='';
+      //lets check for errors
+      if(Samples.validateInputs() == 1) return;
       //create the tray's info placeholders
       count=parseInt(count);
       content='<td colspan=6><table><tr><th>Tray label</th><th>Tray Description</th><th>Tray Size</th></tr>';
@@ -126,7 +90,81 @@ var Samples = {
       content+='</table></td>';
       $('#aliquotNos').html(content);
       $('.tray_name')[0].focus();
+      $('[name=find]').unbind('click');
       $('[name=find]').bind('click', Samples.search);
+   },
+   
+   /**
+    * Validates all the input data being received from the user
+    */
+   validateInputs: function(){
+      //lets validate the number of aliquots entered
+      var i=0, errors = false, reg;
+      if($('#aliquot_number_id').length != 0){
+         var count=$('#aliquot_number_id').val()
+         if(count==='undefined' || isNaN(count) || count===''){
+            alert("Please enter a valid number of aliquots");
+            $('#aliquot_number_id').focus();
+            return 1;
+         }
+      }
+      
+      //lets validate the parent format entered
+      if($('#parent_format').length != 0){
+         reg = /^[A-Z0-9]{3,4}\s+[0-9](\-[0-9])?$/i
+         var parent_format = $('#parent_format').val().trim().toUpperCase()
+         if(parent_format=='undefined' || parent_format=='' ||  !reg.test(parent_format)){
+            alert("Please enter the parent format that we are expecting!\nThe format should be something like 'BSR 6' meaning that a parent has the prefix BSR and 6 digits.");
+            $('#parent_format').focus();
+            return 1;
+         }
+      }
+      
+      //lets validate the aliquot format
+      if($('#aliquot_format').length != 0){
+         reg = /^[A-Z0-9]{3,4}\s+[0-9]((\-[0-9])?((\s+)?,(\s+)?[0-9])?)?$/i
+         var aliquot_format = $('#aliquot_format').val().trim().toUpperCase();
+         if(aliquot_format=='undefined' || aliquot_format=='' || !reg.test(aliquot_format)){
+            var mssg = "Please enter the aliquot format to expect. The format should be something like\nAVAQ 5 ";
+            mssg += "meaning that each aliquot will have the prefix AVAQ and 5 digits, or\nAVAQ 5-7 meaning each aliquot ";
+            mssg += "has a prefix of AVAQ and a suffix of 5 to 7 digits or\nAVAQ 5-7,7 meaning either a AVAQ 5-7 ";
+            mssg += "barcode or a barcode with just 7 digits.";
+            alert(mssg);
+            $('#aliquot_format').focus();
+            return 1;
+         }
+      }
+      
+      //trays
+      if($('.tray_name').length != 0){
+         reg = /^[A-Z0-9]{4,5}\s[0-9]$/i; errors = false;
+         $.each($('.tray_name'), function(){
+            i++;
+            this.value = this.value.trim().toUpperCase();
+            if(this.value == undefined || this.value == '' || !reg.test(this.value)){
+               alert("Please enter the tray format that we are expecting for tray "+i+"!\nThe format should be something like 'TAVQC 5' meaning that the tray name has the prefix TAVQC and 5 digits.");
+               errors = true;
+               return;
+            }
+         });
+         if(errors) return 1;
+      }
+      
+      //tray sizes
+      if($('.tray_size').length != 0){
+         i=0; errors = false;
+         $.each($('.tray_size'), function(){
+            i++;
+            this.value = this.value.trim();
+            if(this.value==='undefined' || isNaN(this.value) || this.value===''){
+               alert("Please enter a valid tray size for tray #"+i);
+               errors = true;
+               return;
+            }
+         });
+         if(errors) return 1;
+      }
+      return 0;
    },
 
    /**

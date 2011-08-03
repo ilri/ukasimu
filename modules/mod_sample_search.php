@@ -229,7 +229,7 @@ class Aliquots extends DBase{
    <div id="aliquot_settings">
       <table>
          <tr><td>Parent Sample Format</td><td><input type='text' id="parent_format" name='aliquot_settings[parent_format]' value='BDT 6' size="15" /></td>
-            <td>Aliquot Format</td><td><input type='text' id="aliquot_format" name='aliquot_settings[aliquot_format]' value="AVAQ 5" size="15" /></td>
+            <td>Aliquot Format</td><td><input type='text' id="aliquot_format" name='aliquot_settings[aliquot_format]' value="AVAQ 5-7,7" size="15" /></td>
             <td>No of Aliquots</td><td><input type='text' name='aliquot_settings[noOfAliquots]' size="3" value="3" id='aliquot_number_id' /></td></tr>
          <tr id='aliquotNos'>&nbsp;</tr>
       </table>
@@ -278,17 +278,41 @@ class Aliquots extends DBase{
     */
    private function GenerateTopPanel(){
       if(!isset($this->settings['settings']['aliquot_format2use'])){
-         $parts = explode(' ', strtoupper($this->settings['settings']['aliquot_format']));
-         $aliquot_format = trim($parts[0]).'[0-9]{'."$parts[1]}";
+         if(strpos($this->settings['settings']['aliquot_format'], ',') !== false){  //expecting aliquots with different formats
+            $parts = preg_split('/,/', strtoupper($this->settings['settings']['aliquot_format']));
+            $this->settings['settings']['aliquot_format2use'] = '';
+            $aliquot_format = '';
+            foreach($parts as $t){
+               $t = trim($t);
+               $tparts = preg_split('/\s+/', strtoupper($t));
+               if(count($tparts) == 1){
+                  $first = str_replace('-', ',', $tparts[0]);
+                  $af = '[0-9]{'."$first}";
+               }
+               else{
+                  $last = str_replace('-', ',', $tparts[1]);
+                  $af = trim($tparts[0]).'[0-9]{'."$last}";
+               }
+               $this->Dbase->CreateLogEntry("Aliquot Format Parts:\n".print_r($tparts, true), 'debug');
+               $aliquot_format .= ($aliquot_format == '') ? '' : '|';
+               $aliquot_format .= $af;
+            }
+         }
+         else{
+            $parts = preg_split('/\s+/', strtoupper($this->settings['settings']['aliquot_format']));
+            $aliquot_format = trim($parts[0]).'[0-9]{'."$parts[1]}";
+         }
          $this->settings['settings']['aliquot_format2use'] = $aliquot_format;
       }
       
       if(!isset($this->settings['settings']['parent_format2use'])){
-         $parts = explode(' ', strtoupper($this->settings['settings']['parent_format']));
+         $parts = preg_split('/\s+/', strtoupper($this->settings['settings']['parent_format']));
          $parent_format = trim($parts[0]).'[0-9]{'."$parts[1]}";
          $this->settings['settings']['parent_format2use'] = $parent_format;
       }
       $no_of_aliquots = $this->settings['settings']['noOfAliquots'];
+      $this->Dbase->CreateLogEntry("Parent Format: {$this->settings['settings']['parent_format2use']}", 'debug');
+      $this->Dbase->CreateLogEntry("Aliquot Format: {$this->settings['settings']['aliquot_format2use']}", 'debug');
 
 ?>
       <div id='aliquot_settings'>
