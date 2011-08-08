@@ -214,7 +214,6 @@ class Aliquots extends DBase{
     */
    private function SampleProcessing(){
       //check the aliquoting settings
-//      $this->Dbase->CreateLogEntry("POST:\n".print_r($_POST, true), 'debug');
       if( (isset($_POST['aliquot_settings']) && is_array($_POST['aliquot_settings'])) || isset($_POST['settings']) ){
          $this->AliquotingSettings();
          $this->GenerateTopPanel();
@@ -257,7 +256,6 @@ class Aliquots extends DBase{
     * @todo    Add validation of the data at this point to avoid data validation being scattered all over the code
     */
    private function AliquotingSettings(){
-//      $this->Dbase->CreateLogEntry("Raw POST:\n".print_r($_POST, true), 'debug');
       if(isset($_POST['parent']) && !in_array($_POST['parent'], array('', 'undefined')))
          $this->settings['parent'] = json_decode($_POST['parent'], true);
       
@@ -273,7 +271,6 @@ class Aliquots extends DBase{
       if(isset($_POST['nextTray']) && !in_array($_POST['nextTray'], array('', 'undefined'))) $this->settings['aliquot2save']['nextTray'] = strtoupper($_POST['nextTray']);
       if(isset($_POST['nextPosition']) && !in_array($_POST['nextPosition'], array('', 'undefined'))) $this->settings['aliquot2save']['nextPosition'] = strtoupper($_POST['nextPosition']);
       
-//      $this->Dbase->CreateLogEntry("Refined POST:\n".print_r($this->settings, true), 'debug');
       $this->settings['presaved_sample'] = false;
       $this->Dbase->CreateLogEntry($this->settings['searchItem'], 'aliquots');    //just log the way we are receiving the searched items
       return 0;
@@ -302,7 +299,6 @@ class Aliquots extends DBase{
                   $last = str_replace('-', ',', $tparts[1]);
                   $af = trim($tparts[0]).'[0-9]{'."$last}";
                }
-               $this->Dbase->CreateLogEntry("Aliquot Format Parts:\n".print_r($tparts, true), 'debug');
                $aliquot_format .= ($aliquot_format == '') ? '' : '|';
                $aliquot_format .= $af;
             }
@@ -320,8 +316,6 @@ class Aliquots extends DBase{
          $this->settings['settings']['parent_format2use'] = $parent_format;
       }
       $no_of_aliquots = $this->settings['settings']['noOfAliquots'];
-//      $this->Dbase->CreateLogEntry("Parent Format: {$this->settings['settings']['parent_format2use']}", 'debug');
-//      $this->Dbase->CreateLogEntry("Aliquot Format: {$this->settings['settings']['aliquot_format2use']}", 'debug');
 
 ?>
       <div id='aliquot_settings'>
@@ -378,13 +372,10 @@ echo "
                else{
                   $aliquots = $res;
                   $this->settings['currentAliquots'] = array();
-//                  $this->Dbase->CreateLogEntry("Parented samples:\n".print_r($res, true), 'debug');
-//                  $this->Dbase->CreateLogEntry("Parented samples settings:\n".print_r($this->settings, true), 'debug');
                }
             }
             elseif(preg_match("/^".$this->settings['settings']['aliquot_format2use']."$/i", $this->settings['searchItem'])){
                //check if we have the parent sample defined for this
-//               $this->Dbase->CreateLogEntry("Settings when having an aliquot:\n".print_r($this->settings, true), 'debug');
                if(!isset($this->settings['parent']['label'])){
                   $addinfo = 'Error! There is no parent sample defined for this aliquot, <b>please scan a parent sample first!</b>';
                }
@@ -393,7 +384,6 @@ echo "
             else{
                $addinfo = 'Unrecognized Sample. Try again';
                //clear all the parent and aliquot fields. jst remain with the searched sample field
-//               $this->Dbase->CreateLogEntry("Unrecognised sample:\n".print_r($this->settings, true), 'debug');
                $this->settings['parent'] = array();
                $this->settings['currentAliquots'] = array();
                $aliquots = array();
@@ -450,8 +440,6 @@ Content;
        * naming of trays in case an aliquot of a tray which has a higher index is deleted
        */
       $assignedTrays = array();
-//      $this->Dbase->CreateLogEntry("Current Aliquot:\n".print_r($aliquots, true), 'debug');
-//      $this->Dbase->CreateLogEntry("Current Aliquot:\n".print_r($this->settings['settings']['trays'], true), 'debug');
       for($i = 0; $i < $this->settings['settings']['noOfAliquots']; $i++){
          $predTray = $this->settings['settings']['trays'][$i];
          //krasota
@@ -503,7 +491,6 @@ Content;
     * @return  mixed    returns a string with the error message if there was an error else return an array with the parent sample metadata
     */
    private function IsParentSample($sample = ''){
-//      $this->Dbase->CreateLogEntry(print_r($this->settings, true), 'debug');
       //try and see that it is in the db before making it the parent sample
       $sample = ($sample == '') ? $this->settings['searchItem'] : $sample;
       $this->Dbase->query = "select a.id, a.label, b.animal_id, b.location, a.comment, b.organism from aliq_samples as a inner join aliq_animals as b on a.animal_id=b.id "
@@ -544,7 +531,6 @@ Content;
          //get the metadata for this sample, ie from which animal its coming from and the animal metadata
          $this->Dbase->query = "select a.id, a.label, b.animal_id, b.location from aliq_samples as a inner join aliq_animals as b on a.animal_id=b.id "
                  . "where lower(a.label) like lower('{$this->settings['parent']['label']}')";
-//         $this->Dbase->CreateLogEntry('', 'debug', true);
          $results = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
          if($results == 1) return "There was an error while fetching data from the database.";
          elseif(count($results) > 1){ //we have more than one sample in the dbase. THIS IS A HUGE ERROR AS WE ARE ONLY DEALING WITH UNIQUE SAMPLES
@@ -564,7 +550,6 @@ Content;
                $this->settings['presaved_sample'] = true;
                //fetch the parent sample metadata from the db
                $this->IsParentSample($aliq[0]['parent']);
-//               $this->Dbase->CreateLogEntry("Settings:\n".print_r($this->settings['currentAliquots'], true), 'debug');
                return "Error! The sample <b>{$this->settings['searchItem']}</b> has already been saved before.";
             }
             $animal = $results[0]['animal_id'];
@@ -576,7 +561,6 @@ Content;
             //expects to find a matching set of noOfAliquots and the index. In case this match is inconsistent,
             //create an generate a position to correct this
             $aliqCount = count($aliq);
-//            $this->Dbase->CreateLogEntry("Debugging_0:\naliq count == $aliqCount", 'debug');
             $this->settings['aliquot2save'] = array();
             if($aliqCount != 0){  //we want to add an aliquot
                //get all the defined aliquot positions
@@ -584,9 +568,7 @@ Content;
                if($aliqNos == 1) return "There was an error while fetching data from the database.";
                
                $lastAliquotIndex = $aliq[$aliqCount-1]['aliquot_number'];
-//               $this->Dbase->CreateLogEntry("Settings:\n".print_r($aliq, true), 'debug');
                for($i = 1, $j = 0; $i < $this->settings['settings']['noOfAliquots'] + 1; $i++, $j++){
-//                  $this->Dbase->CreateLogEntry("Debugging_2:\ni == $i; lastIndex == $lastAliquotIndex", 'debug');
                   //check if we need an aliquot at this position, rem they are ordered according to aliq number
                   if(!in_array($i, $aliqNos)){
                      $res = $this->NewNextSlot($j);
@@ -621,18 +603,7 @@ Content;
       $tray_size = $this->settings['settings']['trays'][$aliquotIndex]['size'];
       $trayFormat = $this->settings['settings']['trays'][$aliquotIndex]['format2use'];
       $parentSample = $this->settings['parent']['label'];
-//      $this->Dbase->CreateLogEntry("Settings while saving:\n".print_r($this->settings, true), 'debug');
       
-  /*    
-      $this->Dbase->CreateLogEntry(
-         "Aliquot Format => {$this->settings['aliquot_format2use']}
-        Previous Sample => $prev_sample
-        Tray Format => {$this->settings['format2use'][$aliquotIndex]}
-        Save in Tray => $save_tray
-        Save Position => $save_position
-        Aliquot Index => $aliquotIndex", 'debug'
-      );
-*/
       //we have something to save, so save it, bt first confirm that the aliquot is right and the tray is ok
       if(preg_match('/^' . $this->settings['settings']['aliquot_format2use'] . '$/i', $prev_sample) && preg_match('/^' . $trayFormat . '$/i', $save_tray) && is_numeric($save_position) 
               && is_numeric($aliquotIndex)){
@@ -643,7 +614,6 @@ Content;
          if($aliq == 1) return "There was an error while fetching data from the database.";
          elseif(count($aliq) + 1 > $this->settings['settings']['noOfAliquots']){
             //if there are enough aliquots it means we dont need to add another aliquot
-//            $this->Dbase->CreateLogEntry("Settings when > 3 aliqs:\n".print_r($this->settings, true), 'debug');
             return "Error! A sample can only have {$this->settings['settings']['noOfAliquots']} aliquots.";
          }
          //check if wee have an aliquot saved in the current position
@@ -653,7 +623,6 @@ Content;
          elseif(count($new_pos) > 1) return "<b>Serious Error! The position $save_tray:$save_position has more than 1 aliquot saved there!</b>";
          elseif(count($new_pos) == 1) return "<b>Error! The position $save_tray:$save_position already has an aliquot saved there!</b>";
          
-//      echo '<pre>'.print_r($this->settings, true).'</pre>';
          if($save_position > 0 && $save_position <= $tray_size){
             $parentSampleId = $this->Dbase->GetSingleRowValue('aliq_samples', 'id', 'label', $parentSample);
             if($parentSampleId == -2){
@@ -684,15 +653,12 @@ Content;
     * @return  mixed    Returns a string with an error message in case of an error, else it returns 0
     */
    private function NewNextSlot($aliquotIndex){
-//      $this->Dbase->CreateLogEntry("Aliquot Index: $aliquotIndex", 'debug');
-//      $this->Dbase->CreateLogEntry("Settings:\n".print_r($this->settings['settings']['trays'], true), 'debug');
       $trayType = strtolower($this->settings['settings']['trays'][$aliquotIndex]['format2use']);  //type must be from 1-4
       $pat = "and lower(b.label) rlike '^" . strtolower($this->settings['settings']['parent_format2use']) . "$'";
 
       $this->Dbase->query = "select a.tray, a.position from aliquots as a inner join aliq_samples as b on a.parent_sample=b.id "
               . "where a.tray is not null and a.position is not null and lower(a.tray) rlike '^$trayType$' $pat order by a.tray desc, a.position desc limit 0,1";
       $results = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
-//      $this->Dbase->CreateLogEntry('', 'debug', true);
       if($results == 1) return "There was an error while determining the next slot.";
       
       preg_match('/^[a-z]+/i', $trayType, $res);
@@ -735,7 +701,6 @@ Content;
        * - if the new tray is not appropriate with the aliquot index return not ok --- bone of contention
        * - update the position of the new aliquot!!!
        */
-//      $this->Dbase->CreateLogEntry("Aliquot Settings:\n".print_r($_POST, true), 'debug');
       $this->Dbase->query = "select * from aliquots where label='{$_POST['aliquot']}'";
       $res = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
       if($res == 1) return $this->Dbase->lastError;
@@ -761,7 +726,6 @@ Content;
     * @return  mixed    Returns a string with the error message incase of an error, else it returns 0 if all is ok
     */
    private function DeleteAliquot(){
-//      $this->Dbase->CreateLogEntry("Aliquot Settings:\n".print_r($_POST, true), 'debug');
       $this->Dbase->query = "select * from aliquots where label='{$_POST['aliquot']}'";
       $res = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
       if($res == 1) return $this->Dbase->lastError;
@@ -786,7 +750,6 @@ Content;
          //since we are having an error and this was an ajax call, we shall have to recreate the interface again thru a thrupass call
          $fd = fopen($_SERVER['HTTP_REFERER'], 'r');
          fpassthru($fd);
-//            $this->Home('There was an error while generating a current database dump. Please do it manually');
       }
       else{    //lets send the file back to the user
          header('Content-Description: File Transfer');

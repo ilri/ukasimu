@@ -38,12 +38,9 @@ require_once 'mod_sample_search.php';
 
 $Aliquots = new Aliquots();
 
-//echo '<pre>session: '.print_r($_COOKIE, true).'</pre>';
-
 //lets initiate the sessions
 session_save_path($Aliquots->config['session_dbase']);
 session_name('sample_search');
-//echo '<pre>session: '.print_r($GLOBALS, true).'</pre>';
 $Aliquots->SessionStart();
 
 //get what the user wants
@@ -57,6 +54,7 @@ $user = isset($_SESSION['user']) ? $_SESSION['user'] : '';
 define('OPTIONS_HOME_PAGE', $_SERVER['PHP_SELF']);
 define('OPTIONS_REQUESTED_MODULE', $paging);
 define('OPTIONS_CURRENT_USER', $user);
+
 /**
  * @var string    What the user wants
  */
