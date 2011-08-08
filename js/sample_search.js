@@ -66,7 +66,7 @@ var Samples = {
          if(Main.ajaxParams.div2Update != undefined) $('#'+Main.ajaxParams.div2Update).html(data);
       }
       
-      if($('#notification_box')!=undefined){
+      if($('#notification_box') != undefined){
          notificationMessage({create:false, hide:true, updateText:true, text:message, error:err});
       }
       $('#searchItemId').focus();
@@ -137,7 +137,7 @@ var Samples = {
       
       //trays
       if($('.tray_name').length != 0){
-         reg = /^[A-Z0-9]{4,5}\s[0-9]$/i; errors = false;
+         reg = /^[A-Z0-9]{4,5}\s[0-9]$/i;errors = false;
          $.each($('.tray_name'), function(){
             i++;
             this.value = this.value.trim().toUpperCase();
@@ -152,7 +152,7 @@ var Samples = {
       
       //tray sizes
       if($('.tray_size').length != 0){
-         i=0; errors = false;
+         i=0;errors = false;
          $.each($('.tray_size'), function(){
             i++;
             this.value = this.value.trim();
@@ -163,6 +163,26 @@ var Samples = {
             }
          });
          if(errors) return 1;
+      }
+      
+      //edited tray label
+      if($('[name=edited_tray]').length != 0){
+         var tray = $('[name=edited_tray]').val().toUpperCase();
+         reg = /^[A-Z]{5}[0-9]{5}$/i;
+         if(tray == undefined || tray == '' || !reg.test(tray)){
+            alert("Error, the tray label entered is incorrect. Expecting the label should be something like 'TAVQC00032'.");
+            return 1;
+         }
+      }
+      
+      //edited aliquot position
+      if($('[name=edited_position]').length != 0){
+         var pos = $('[name=edited_position]').val();
+         reg = /^[0-9]{1,3}$/i;
+         if(pos == undefined || pos == '' || !reg.test(pos) || pos == 0 || pos > 100){
+            alert("Error, the new position of the aliquot is incorrect. It should be a number not equal to 0 and not greater than 100.");
+            return 1;
+         }
       }
       return 0;
    },
@@ -175,6 +195,11 @@ var Samples = {
    },
 
    ukarabati: function(aliquot, action){
+      //check that we are not editing another aliquot first
+      if($('[name=edited_tray]').length != 0){
+         alert('Please finish editing '+$('[name=aliquot2edit]').val()+' first before editing this aliquot');
+         return;
+      }
       var res, message, sender, parent, tray, position, edited_aliquot;
       if(action=='delete') message = 'Are you sure you want to delete "'+aliquot+'"?';
       else if(action=='edit') message = 'Are you sure you want to edit the tray settings for "'+aliquot+'"?';
@@ -192,33 +217,87 @@ var Samples = {
       if(action=='edit'){
          tray = parent.childNodes[2].innerHTML;
          position = parent.childNodes[3].innerHTML;
+         Main.prevTray = tray; Main.prevPos = position;
          parent.childNodes[2].innerHTML = "<input type='text' name='edited_tray' value='"+tray+"' />";   //the tray
          parent.childNodes[3].innerHTML = "<input type='text' name='edited_position' value='"+position+"' />";   //tray position
-         parent.childNodes[4].innerHTML = "<a href='javascript:;' onClick='Samples.saveEdits(\"aliquot\");'>Save Changes</a>";   //save link
+         parent.childNodes[4].innerHTML = "<a href='javascript:;' onClick='Samples.saveEdits();'>Save</a>\n\
+         <a href='javascript:;' onClick='Samples.cancelEdits();'>Cancel</a><input type='hidden' name='aliquot2edit' value='"+aliquot+"' />";   //save and cancel links
          $('[name=edited_tray').focus();
-         edited_aliquot = document.createElement('span');
-         edited_aliquot.innerHTML = "<input type='hidden' name='aliquot2edit' value='"+aliquot+"' />";
-         parent.appendChild(edited_aliquot);
       }
       else{
-         var form_action;
-         edited_aliquot = document.createElement('span');
-         edited_aliquot.innerHTML = "<input type='hidden' name='aliquot2delete' value='"+aliquot+"' />";
-         parent.appendChild(edited_aliquot);
-         form_action = $('#searchFormId')[0].action;
-         $('#searchFormId')[0].action = form_action.replace(/\?page=.+/, '?page=delete_aliquot');
-         $('[name=searchItem]').val($('[name=parent]').val());
-         document.forms["searchFormId"].submit();
+         Main.parent2delete = parent;
+         //lets do the saving. replace the default action with update_positions and we hope all will be well
+         var params;
+         params = 'action=delete&aliquot='+encodeURIComponent(aliquot);
+         $.ajax({type:"POST", url:'mod_ajax_calls.php?page=update_positions', data:params, dataType:'json', success:Samples.updateDeletes});
       }
    },
 
-   saveEdits: function(aliquot){
+   /**
+    * Cancels the editing process of the current samples
+    */
+   cancelEdits: function(){
+      var aliquot = $('[name=aliquot2edit]').val();
+      var parent = $('[name=edited_position]')[0].parentNode.parentNode;
+      parent.childNodes[2].innerHTML = Main.prevTray;
+      parent.childNodes[3].innerHTML = Main.prevPos;
+      parent.childNodes[4].innerHTML = "<a href='javascript:;' onClick='Samples.ukarabati(\""+aliquot+"\", \"edit\")'>Edit</a>\n\
+      <a href='javascript:;' onClick='Samples.ukarabati(\""+aliquot+"\", \"delete\")'>Delete</a>";   //restore the links
+      $('#searchItemId').focus();
+   },
+
+   /**
+    * Saves the new location for the aliquots being edited. Will check that everythings is in place before sending the data to the server
+    */
+   saveEdits: function(){
+      //do the preliminary checks for the trays
+      if(Samples.validateInputs() == 1) return;
       //lets do the saving. replace the default action with update_positions and we hope all will be well
-      var form_action;
-      form_action = $('#searchFormId')[0].action;
-      $('#searchFormId')[0].action = form_action.replace(/\?page=.+/, '?page=update_positions');
-      $('[name=searchItem]').val($('[name=parent]').val());
-      document.forms["searchFormId"].submit();
+      var params, tray = $('[name=edited_tray]').val(), pos = $('[name=edited_position]').val(), aliquot = $('[name=aliquot2edit]').val();
+      params = 'action=edit&tray='+encodeURIComponent(tray)+'&position='+encodeURIComponent(pos)+'&aliquot='+encodeURIComponent(aliquot);
+      Main.editedPos = pos; Main.editedTray = tray;
+      $.ajax({type:"POST", url:'mod_ajax_calls.php?page=update_positions', data:params, dataType:'json', success:Samples.updateEdits});
+   },
+   
+   /**
+    * Updates the interface depending on whether the aliquots were correctly edited or not
+    */
+   updateEdits: function(data){
+      var message, parent = $('[name=edited_position]')[0].parentNode.parentNode, aliquot = $('[name=aliquot2edit]').val();
+      if(data.error == undefined){
+         parent.childNodes[2].innerHTML = Main.editedTray;
+         parent.childNodes[3].innerHTML = Main.editedPos;
+         parent.childNodes[4].innerHTML = "<a href='javascript:;' onClick='Samples.ukarabati(\""+aliquot+"\", \"edit\")'>Edit</a>\n\
+         <a href='javascript:;' onClick='Samples.ukarabati(\""+aliquot+"\", \"delete\")'>Delete</a>";   //restore the links
+         message = "<div class='no_error'>The aliquot location has been successfully updated.<br />Enter a sample to aliquot.</div>";
+      }
+      else{
+         message = "<div class='error'>"+data.error+'</div>';
+         Samples.cancelEdits();
+      }
+      
+      $('#search_mssg').html(message);
+      $('#searchItemId').focus();
+   },
+   
+   /**
+    * Updates the interface depending on whether the aliquots were correctly edited or not
+    */
+   updateDeletes: function(data){
+      var message, parent = Main.parent2delete;
+      if(data.error == undefined){
+         parent.childNodes[1].innerHTML = '&nbsp;';
+         parent.childNodes[2].innerHTML = '&nbsp;';
+         parent.childNodes[3].innerHTML = '&nbsp;';
+         parent.childNodes[4].innerHTML = '&nbsp;';
+         message = "<div class='no_error'>The aliquot location has been successfully deleted.<br />Enter a sample to aliquot.</div>";
+         delete(Samples.aliquot2save);
+         $('#search_mssg').html(message);
+      }
+      else{
+         message = "<div class='error'>"+data.error+'</div>';
+      }
+      $('#searchItemId').focus();
    },
    
    displayExtraInfo: function(timestamp, lat, longitude, collector, comments, clinical, animal){

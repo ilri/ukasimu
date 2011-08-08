@@ -179,6 +179,13 @@ class Aliquots extends DBase{
          $this->SampleProcessing();
          $this->footerLinks .= " | <a href=''>Sort Home</a>";
       }
+      elseif(OPTIONS_REQUESTED_MODULE == 'update_positions'){
+         if($_POST['action'] == 'edit') $res = $this->UpdateAliquotPosition();
+         elseif($_POST['action'] == 'delete') $res = $this->DeleteAliquot();
+         
+         if(is_string($res)) die(json_encode(array('error'=>"<b>$res</b><br />Enter a sample to aliquot.")));
+         else die(json_encode(array()));
+      }
       elseif(OPTIONS_REQUESTED_MODULE == 'backup') $this->CreateDbDump();
    }
    
@@ -250,6 +257,7 @@ class Aliquots extends DBase{
     * @todo    Add validation of the data at this point to avoid data validation being scattered all over the code
     */
    private function AliquotingSettings(){
+//      $this->Dbase->CreateLogEntry("Raw POST:\n".print_r($_POST, true), 'debug');
       if(isset($_POST['parent']) && !in_array($_POST['parent'], array('', 'undefined')))
          $this->settings['parent'] = json_decode($_POST['parent'], true);
       
@@ -262,9 +270,10 @@ class Aliquots extends DBase{
           $this->settings['settings'] = $_POST['aliquot_settings'];
       
       $this->settings['searchItem'] = strtoupper($_POST['searchItem']);
-      if(isset($_POST['nextTray']) && !in_array($_POST['nextTray'], array('', 'undefined'))) $this->settings['nextTray'] = strtoupper($_POST['nextTray']);
-      if(isset($_POST['nextPosition']) && !in_array($_POST['nextPosition'], array('', 'undefined'))) $this->settings['nextPosition'] = strtoupper($_POST['nextPosition']);
+      if(isset($_POST['nextTray']) && !in_array($_POST['nextTray'], array('', 'undefined'))) $this->settings['aliquot2save']['nextTray'] = strtoupper($_POST['nextTray']);
+      if(isset($_POST['nextPosition']) && !in_array($_POST['nextPosition'], array('', 'undefined'))) $this->settings['aliquot2save']['nextPosition'] = strtoupper($_POST['nextPosition']);
       
+//      $this->Dbase->CreateLogEntry("Refined POST:\n".print_r($this->settings, true), 'debug');
       $this->settings['presaved_sample'] = false;
       $this->Dbase->CreateLogEntry($this->settings['searchItem'], 'aliquots');    //just log the way we are receiving the searched items
       return 0;
@@ -311,8 +320,8 @@ class Aliquots extends DBase{
          $this->settings['settings']['parent_format2use'] = $parent_format;
       }
       $no_of_aliquots = $this->settings['settings']['noOfAliquots'];
-      $this->Dbase->CreateLogEntry("Parent Format: {$this->settings['settings']['parent_format2use']}", 'debug');
-      $this->Dbase->CreateLogEntry("Aliquot Format: {$this->settings['settings']['aliquot_format2use']}", 'debug');
+//      $this->Dbase->CreateLogEntry("Parent Format: {$this->settings['settings']['parent_format2use']}", 'debug');
+//      $this->Dbase->CreateLogEntry("Aliquot Format: {$this->settings['settings']['aliquot_format2use']}", 'debug');
 
 ?>
       <div id='aliquot_settings'>
@@ -386,7 +395,7 @@ echo "
                //clear all the parent and aliquot fields. jst remain with the searched sample field
 //               $this->Dbase->CreateLogEntry("Unrecognised sample:\n".print_r($this->settings, true), 'debug');
                $this->settings['parent'] = array();
-               $this->settings['aliquot2save'] = array();
+               $this->settings['currentAliquots'] = array();
                $aliquots = array();
             }
          }
@@ -406,7 +415,6 @@ echo "
       $aliquot2save = (!isset($this->settings['aliquot2save'])) ? 'undefined' : json_encode($this->settings['aliquot2save']);
       $settings = json_encode($this->settings['settings']);
       
-//      $this->Dbase->CreateLogEntry("Settings being saved:\n".print_r($this->settings, true), 'debug');
       if(count($aliquots) == 0 && count($this->settings['currentAliquots']) != 0) $aliquots = $this->settings['currentAliquots'];
       
 echo <<<Content
@@ -442,36 +450,36 @@ Content;
        * naming of trays in case an aliquot of a tray which has a higher index is deleted
        */
       $assignedTrays = array();
+//      $this->Dbase->CreateLogEntry("Current Aliquot:\n".print_r($aliquots, true), 'debug');
+//      $this->Dbase->CreateLogEntry("Current Aliquot:\n".print_r($this->settings['settings']['trays'], true), 'debug');
       for($i = 0; $i < $this->settings['settings']['noOfAliquots']; $i++){
          $predTray = $this->settings['settings']['trays'][$i];
-         if(isset($aliquots[$i]['aliquot_number'])){
-            /**
-             * if the aliquot is already defined, display the institution its intended to go to by getting the tray name using the aliquot number
-             * and tray indexes. Add this fetched tray to the list of assignedTrays
-             */
-            //$predTray = $this->settings['settings']['trays'][$aliquots[$i]['aliquot_number'] - 1];
-         }
-         else{
-            /**
-             * naturally in case an aliquot is not defined, we would get the next institution to receive an aliquot. However if an aliquot of an
-             * insitution with a lower index is deleted, the institution with higher indexes might already have received an aliquot. To avoid this
-             * check which insitution is not on the list of assignedTrays and get the first one which is not defined.
-             */
-            //$t = array_diff($this->settings['just_trays'], $assignedTrays);
-            //$predTray = $this->settings['settings']['trays'][key($t)];
-         }
-         //$assignedTrays[] = $predTray['name'];
+         //krasota
          if($i == $this->settings['settings']['noOfAliquots'] - 1){
             $bClass = "class='bottom'";
             $addClass = 'bottom';
          }
-         if($aliquots[$i]['tray'] == '') $aliquots[$i]['tray'] = '&nbsp;';
-         if($aliquots[$i]['position'] == '') $aliquots[$i]['position'] = '&nbsp;';
-         $actions = ($aliquots[$i]['label'] == '') ? '&nbsp;' : "<a href='javascript:;' onClick='Samples.ukarabati(\"{$aliquots[$i]['label']}\", \"edit\")'>Edit</a>&nbsp;<a href='javascript:;' onClick='Samples.ukarabati(\"{$aliquots[$i]['label']}\", \"delete\")'>Delete</a>";
-         if($aliquots[$i]['label'] == '') $aliquots[$i]['label'] = '&nbsp;';
-         $presaved = ($this->settings['presaved_sample'] == true && $aliquots[$i]['label'] == $this->settings['searchItem']) ? 'presaved' : '';
-         echo "<tr class='$presaved'><td class='left $addClass'>" . $predTray['descr'] . ":</td><td $bClass>{$aliquots[$i]['label']}" .
-                 "</td><td $bClass>{$aliquots[$i]['tray']}</td><td $bClass>{$aliquots[$i]['position']}</td><td $bClass>$actions</td></tr>";
+         //get the corresponding sample for this tray
+         $curAliquot = '';
+         foreach($aliquots as $t){
+            if(preg_match("/^".$predTray['format2use']."$/i", $t['tray']) || preg_match("/^<input.+value='".$predTray['format2use']."'\s+\/>$/i", $t['tray'])){
+               $curAliquot = $t;
+               break;
+            }
+         }
+         if($curAliquot == ''){
+            echo "<tr><td class='left $addClass'>" . $predTray['descr'] . ":</td><td $bClass>&nbsp;</td><td $bClass>&nbsp;</td><td $bClass>&nbsp;</td><td $bClass>&nbsp;</td></tr>";
+            continue;
+         }
+         
+         //$assignedTrays[] = $predTray['name'];
+         if($curAliquot['tray'] == '') $curAliquot['tray'] = '&nbsp;';
+         if($curAliquot['position'] == '') $curAliquot['position'] = '&nbsp;';
+         $actions = ($curAliquot['label'] == '') ? '&nbsp;' : "<a href='javascript:;' onClick='Samples.ukarabati(\"{$curAliquot['label']}\", \"edit\")'>Edit</a>&nbsp;<a href='javascript:;' onClick='Samples.ukarabati(\"{$curAliquot['label']}\", \"delete\")'>Delete</a>";
+         if($curAliquot['label'] == '') $curAliquot['label'] = '&nbsp;';
+         $presaved = ($this->settings['presaved_sample'] == true && $curAliquot['label'] == $this->settings['searchItem']) ? 'presaved' : '';
+         echo "<tr class='$presaved'><td class='left $addClass'>" . $predTray['descr'] . ":</td><td $bClass>{$curAliquot['label']}" .
+                 "</td><td $bClass>{$curAliquot['tray']}</td><td $bClass>{$curAliquot['position']}</td><td $bClass>$actions</td></tr>";
       }
 ?>
          </table>
@@ -567,17 +575,28 @@ Content;
             //determine which aliquot number we really want. will take care if we delete an aliquot of a institution defined first
             //expects to find a matching set of noOfAliquots and the index. In case this match is inconsistent,
             //create an generate a position to correct this
-            $generated = false;
+            $aliqCount = count($aliq);
+//            $this->Dbase->CreateLogEntry("Debugging_0:\naliq count == $aliqCount", 'debug');
             $this->settings['aliquot2save'] = array();
-            for($i = 0; $i < $this->settings['noOfAliquots']; $i++){
-               if($i + 1 != $aliq[$i]['aliquot_number']){
-                  $generated = true;
-                  $res = $this->NewNextSlot($i);
-                  if(is_string($res)) return $res;
-                  break;
+            if($aliqCount != 0){  //we want to add an aliquot
+               //get all the defined aliquot positions
+               $aliqNos = $this->Dbase->GetSingleColumnValues('aliquots', 'aliquot_number', 'aliquot_number', "parent_sample={$aliq[0]['parent_sample']}");
+               if($aliqNos == 1) return "There was an error while fetching data from the database.";
+               
+               $lastAliquotIndex = $aliq[$aliqCount-1]['aliquot_number'];
+//               $this->Dbase->CreateLogEntry("Settings:\n".print_r($aliq, true), 'debug');
+               for($i = 1, $j = 0; $i < $this->settings['settings']['noOfAliquots'] + 1; $i++, $j++){
+//                  $this->Dbase->CreateLogEntry("Debugging_2:\ni == $i; lastIndex == $lastAliquotIndex", 'debug');
+                  //check if we need an aliquot at this position, rem they are ordered according to aliq number
+                  if(!in_array($i, $aliqNos)){
+                     $res = $this->NewNextSlot($j);
+                     if(is_string($res)) return $res;
+                     break;
+                  }
                }
             }
-            if($generated == false) $this->NewNextSlot(count($aliq));
+            else $this->NewNextSlot(0);
+            
             $this->settings['aliquot2save']['label'] = $this->settings['searchItem'];
             //now create the place holder for this new sample
             $tray = "<input type='text' name='nextTray' size='15px' id='nextTrayId' value='{$this->settings['aliquot2save']['nextBox']}' />";
@@ -627,6 +646,13 @@ Content;
 //            $this->Dbase->CreateLogEntry("Settings when > 3 aliqs:\n".print_r($this->settings, true), 'debug');
             return "Error! A sample can only have {$this->settings['settings']['noOfAliquots']} aliquots.";
          }
+         //check if wee have an aliquot saved in the current position
+         $this->Dbase->query = "select * from aliquots where tray='$save_tray' and position=$save_position";
+         $new_pos = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
+         if($new_pos == 1) return $this->Dbase->lastError;
+         elseif(count($new_pos) > 1) return "<b>Serious Error! The position $save_tray:$save_position has more than 1 aliquot saved there!</b>";
+         elseif(count($new_pos) == 1) return "<b>Error! The position $save_tray:$save_position already has an aliquot saved there!</b>";
+         
 //      echo '<pre>'.print_r($this->settings, true).'</pre>';
          if($save_position > 0 && $save_position <= $tray_size){
             $parentSampleId = $this->Dbase->GetSingleRowValue('aliq_samples', 'id', 'label', $parentSample);
@@ -695,6 +721,59 @@ Content;
       return 0;
    }
 
+   /**
+    * Updates the aliquot position of an aliquot
+    * 
+    * @return  mixed    Returns a string with the error message incase of an error, else it returns 0 if all is ok
+    */
+   private function UpdateAliquotPosition(){
+      /**
+       * Logic of this function
+       * - get the previous location of this aliquot
+       * - if nothing has changed, return all ok
+       * - if the new location is not empty return not ok
+       * - if the new tray is not appropriate with the aliquot index return not ok --- bone of contention
+       * - update the position of the new aliquot!!!
+       */
+//      $this->Dbase->CreateLogEntry("Aliquot Settings:\n".print_r($_POST, true), 'debug');
+      $this->Dbase->query = "select * from aliquots where label='{$_POST['aliquot']}'";
+      $res = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
+      if($res == 1) return $this->Dbase->lastError;
+      elseif(count($res) == 0) return "Error! We have dont have an aliquot with the label '{$_POST['aliquot']}'!";
+      elseif(count($res) != 1) return "Serious Error! We have 2 aliquots with the label '{$_POST['aliquot']}'!";
+      $res = $res[0];
+      if(strtoupper($_POST['tray']) == $res['tray'] && $_POST['position'] == $res['position']) return 0;   //nothing has changed...jst return
+      //check if the new position is empty
+      $this->Dbase->query = "select * from aliquots where tray='{$_POST['tray']}' and position={$_POST['position']}";
+      $new_pos = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
+      if($new_pos == 1) return $this->Dbase->lastError;
+      elseif(count($new_pos) > 1) return "Error! The position {$_POST['tray']}:{$_POST['position']} has more than 1 aliquot saved there!";
+      elseif(count($new_pos) != 0) return "Error! The position {$_POST['tray']}:{$_POST['position']} is not empty! Cant save there!";
+      //we good, now update the position
+      $res1 = $this->Dbase->UpdateRecords('aliquots', array('tray', 'position'), array($_POST['tray'], $_POST['position']), 'id', $res['id']);
+      if($res1 == 1) return "Error! There was an error while moving the aliquot '{$_POST['aliquot']}' ({$res['tray']},{$res['position']}) to {$_POST['tray']},{$_POST['position']}.";
+      return 0;
+   }
+   
+   /**
+    * Deletes an aliquot passed from the client side
+    * 
+    * @return  mixed    Returns a string with the error message incase of an error, else it returns 0 if all is ok
+    */
+   private function DeleteAliquot(){
+//      $this->Dbase->CreateLogEntry("Aliquot Settings:\n".print_r($_POST, true), 'debug');
+      $this->Dbase->query = "select * from aliquots where label='{$_POST['aliquot']}'";
+      $res = $this->Dbase->ExecuteQuery(MYSQLI_ASSOC);
+      if($res == 1) return $this->Dbase->lastError;
+      elseif(count($res) == 0) return "Error! We have dont have an aliquot with the label '{$_POST['aliquot']}'!";
+      elseif(count($res) != 1) return "Serious Error! We have 2 aliquots with the label '{$_POST['aliquot']}'!";
+      $res = $res[0];
+      //now delete this guy
+      $res1 = $this->Dbase->DeleteData('aliquots', 'id', $res['id']);
+      if($res == 1) return "Error! There was an error while deleting the aliquot '{$_POST['aliquot']}'! Please try again.";
+      return 0;
+   }
+   
    /**
     * Creates a dbase dump of the current database and forces a download.
     * 
